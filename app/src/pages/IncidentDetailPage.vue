@@ -26,6 +26,8 @@ const incident = computed(() => store.byId(id.value))
 onMounted(() => { if (store.incidents.length === 0) store.fetchAll() })
 
 const statuses: TriageStatus[] = ['green', 'yellow', 'red']
+
+
 </script>
 
 <template>
@@ -51,6 +53,22 @@ const statuses: TriageStatus[] = ['green', 'yellow', 'red']
       >
         {{ t('category.' + incident.category) }}
       </h1>
+
+      <!-- Category Specific Attributes Display -->
+      <div v-if="incident.structuralDamage || incident.resourceType || incident.medicalCount || incident.obstructionType" class="flex flex-wrap gap-2 text-xs font-semibold my-1">
+        <span v-if="incident.structuralDamage" class="rounded-full bg-slate-100 text-slate-700 px-3 py-1 ring-1 ring-slate-200">
+          🏢 {{ t('category.structuralDamageLabel') }}: {{ t('category.damageValues.' + incident.structuralDamage) }}
+        </span>
+        <span v-if="incident.resourceType" class="rounded-full bg-blue-50 text-blue-700 px-3 py-1 ring-1 ring-blue-100">
+          📦 {{ t('category.resourceTypeLabel') }}: {{ t('category.resourceValues.' + incident.resourceType) }}
+        </span>
+        <span v-if="incident.medicalCount" class="rounded-full bg-red-50 text-red-700 px-3 py-1 ring-1 ring-red-100">
+          🚑 {{ t('category.medicalCountLabel') }}: {{ t('category.medicalCountValues.' + incident.medicalCount) }}
+        </span>
+        <span v-if="incident.obstructionType" class="rounded-full bg-amber-50 text-amber-700 px-3 py-1 ring-1 ring-amber-100">
+          ⚠️ {{ t('category.obstructionTypeLabel') }}: {{ t('category.obstructionValues.' + incident.obstructionType) }}
+        </span>
+      </div>
 
       <p v-if="incident.subjectName" class="text-sm font-medium text-slate-700">{{ incident.subjectName }}</p>
       <p class="text-slate-700">{{ incident.description }}</p>

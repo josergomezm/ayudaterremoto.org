@@ -69,6 +69,10 @@ export declare const reportSchema: z.ZodObject<{
     subjectDetails: z.ZodOptional<z.ZodString>;
     lastSeen: z.ZodOptional<z.ZodString>;
     contact: z.ZodOptional<z.ZodString>;
+    structuralDamage: z.ZodOptional<z.ZodEnum<["minor", "moderate", "severe", "collapse"]>>;
+    resourceType: z.ZodOptional<z.ZodEnum<["water", "food", "medical", "shelter", "tools", "other"]>>;
+    medicalCount: z.ZodOptional<z.ZodEnum<["1", "2-5", "6-10", "10+"]>>;
+    obstructionType: z.ZodOptional<z.ZodEnum<["landslide", "debris", "trees", "vehicles", "other"]>>;
 }, "strip", z.ZodTypeAny, {
     description: string;
     category: "medical" | "structural" | "obstruction" | "resource";
@@ -80,6 +84,10 @@ export declare const reportSchema: z.ZodObject<{
     subjectDetails?: string | undefined;
     lastSeen?: string | undefined;
     contact?: string | undefined;
+    structuralDamage?: "moderate" | "minor" | "severe" | "collapse" | undefined;
+    resourceType?: "medical" | "water" | "food" | "shelter" | "tools" | "other" | undefined;
+    medicalCount?: "1" | "2-5" | "6-10" | "10+" | undefined;
+    obstructionType?: "other" | "landslide" | "debris" | "trees" | "vehicles" | undefined;
     unit?: string | undefined;
     locationPrecise?: boolean | undefined;
 }, {
@@ -93,6 +101,10 @@ export declare const reportSchema: z.ZodObject<{
     subjectDetails?: string | undefined;
     lastSeen?: string | undefined;
     contact?: string | undefined;
+    structuralDamage?: "moderate" | "minor" | "severe" | "collapse" | undefined;
+    resourceType?: "medical" | "water" | "food" | "shelter" | "tools" | "other" | undefined;
+    medicalCount?: "1" | "2-5" | "6-10" | "10+" | undefined;
+    obstructionType?: "other" | "landslide" | "debris" | "trees" | "vehicles" | undefined;
     unit?: string | undefined;
     locationPrecise?: boolean | undefined;
 }>;

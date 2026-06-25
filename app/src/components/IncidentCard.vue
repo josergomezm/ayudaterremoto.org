@@ -30,6 +30,23 @@ const { t } = useI18n()
     <h3 class="font-semibold text-slate-900" :style="{ viewTransitionName: 'incident-title-' + incident.id }">
       {{ t('category.' + incident.category) }}
     </h3>
+    
+    <!-- Category-Specific Tags -->
+    <div v-if="incident.structuralDamage || incident.resourceType || incident.medicalCount || incident.obstructionType" class="flex flex-wrap gap-1 text-[11px] font-semibold">
+      <span v-if="incident.structuralDamage" class="rounded-full bg-slate-50 text-slate-600 px-2 py-0.5 border border-slate-200">
+        🏢 {{ t('category.damageValues.' + incident.structuralDamage) }}
+      </span>
+      <span v-if="incident.resourceType" class="rounded-full bg-blue-50 text-blue-600 px-2 py-0.5 border border-blue-100">
+        📦 {{ t('category.resourceValues.' + incident.resourceType) }}
+      </span>
+      <span v-if="incident.medicalCount" class="rounded-full bg-red-50 text-red-600 px-2 py-0.5 border border-red-100">
+        🚑 {{ t('category.medicalCountValues.' + incident.medicalCount) }}
+      </span>
+      <span v-if="incident.obstructionType" class="rounded-full bg-amber-50 text-amber-600 px-2 py-0.5 border border-amber-100">
+        ⚠️ {{ t('category.obstructionValues.' + incident.obstructionType) }}
+      </span>
+    </div>
+
     <p class="line-clamp-2 text-sm text-slate-600">{{ incident.description }}</p>
   </RouterLink>
 </template>

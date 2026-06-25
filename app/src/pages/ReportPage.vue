@@ -34,6 +34,11 @@ const asMissing = ref(false)
 const description = ref('')
 const result = ref<'submitted' | 'queued' | null>(null)
 
+const structuralDamage = ref<'minor' | 'moderate' | 'severe' | 'collapse' | ''>('')
+const resourceType = ref<'water' | 'food' | 'medical' | 'shelter' | 'tools' | 'other' | ''>('')
+const medicalCount = ref<'1' | '2-5' | '6-10' | '10+' | ''>('')
+const obstructionType = ref<'landslide' | 'debris' | 'trees' | 'vehicles' | 'other' | ''>('')
+
 const categories: Category[] = ['medical', 'structural', 'obstruction', 'resource']
 
 // Triage questions depend on the chosen category.
@@ -78,6 +83,10 @@ async function submit() {
     subjectDetails: showMissingQuestionnaire.value && subjectDetails.value ? subjectDetails.value : undefined,
     lastSeen: showMissingQuestionnaire.value && lastSeen.value ? lastSeen.value : undefined,
     contact: showMissingQuestionnaire.value && contact.value ? contact.value : undefined,
+    structuralDamage: category.value === 'structural' && structuralDamage.value ? structuralDamage.value : undefined,
+    resourceType: category.value === 'resource' && resourceType.value ? resourceType.value : undefined,
+    medicalCount: category.value === 'medical' && medicalCount.value ? medicalCount.value : undefined,
+    obstructionType: category.value === 'obstruction' && obstructionType.value ? obstructionType.value : undefined,
   })
   // Optionally also add the person to the public missing-persons list.
   if (showMissingQuestionnaire.value && asMissing.value && subjectName.value) {
@@ -140,6 +149,9 @@ async function submit() {
         >
           {{ t('category.' + c) }}
         </BaseButton>
+        <BaseButton block variant="neutral" class="mt-2" @click="step = 0">
+          <span class="inline-flex items-center gap-1"><MaterialIcon name="arrow_back" :size="18" /> {{ t('common.back') }}</span>
+        </BaseButton>
       </section>
 
       <!-- Step 2 — category-specific triage (one question per row, big yes/no) -->
@@ -152,7 +164,12 @@ async function submit() {
             <BaseButton :variant="answers[q.id] === false ? 'primary' : 'neutral'" @click="answer(q.id, false)">{{ t('common.no') }}</BaseButton>
           </div>
         </div>
-        <BaseButton block @click="step = 3">{{ t('common.submit') }}</BaseButton>
+        <div class="flex gap-2 pt-2">
+          <BaseButton variant="neutral" @click="step = 1">
+            <span class="inline-flex items-center gap-1"><MaterialIcon name="arrow_back" :size="18" /> {{ t('common.back') }}</span>
+          </BaseButton>
+          <BaseButton class="flex-1" @click="step = 3">{{ t('common.next') }}</BaseButton>
+        </div>
       </section>
 
       <!-- Step 3 — person details (proxy) + location + context -->
@@ -201,6 +218,54 @@ async function submit() {
           </p>
         </div>
 
+        <!-- Category-Specific Fields (Gaps Resolution) -->
+        <div v-if="category === 'structural'" class="space-y-1.5">
+          <label class="text-sm font-medium text-slate-800">{{ t('category.structuralDamageLabel') }}</label>
+          <select v-model="structuralDamage" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 bg-white">
+            <option value="">{{ t('category.selectDamage') }}</option>
+            <option value="minor">{{ t('category.damageValues.minor') }}</option>
+            <option value="moderate">{{ t('category.damageValues.moderate') }}</option>
+            <option value="severe">{{ t('category.damageValues.severe') }}</option>
+            <option value="collapse">{{ t('category.damageValues.collapse') }}</option>
+          </select>
+        </div>
+
+        <div v-if="category === 'resource'" class="space-y-1.5">
+          <label class="text-sm font-medium text-slate-800">{{ t('category.resourceTypeLabel') }}</label>
+          <select v-model="resourceType" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 bg-white">
+            <option value="">{{ t('category.selectResource') }}</option>
+            <option value="water">{{ t('category.resourceValues.water') }}</option>
+            <option value="food">{{ t('category.resourceValues.food') }}</option>
+            <option value="medical">{{ t('category.resourceValues.medical') }}</option>
+            <option value="shelter">{{ t('category.resourceValues.shelter') }}</option>
+            <option value="tools">{{ t('category.resourceValues.tools') }}</option>
+            <option value="other">{{ t('category.resourceValues.other') }}</option>
+          </select>
+        </div>
+
+        <div v-if="category === 'medical'" class="space-y-1.5">
+          <label class="text-sm font-medium text-slate-800">{{ t('category.medicalCountLabel') }}</label>
+          <select v-model="medicalCount" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 bg-white">
+            <option value="">{{ t('category.selectCount') }}</option>
+            <option value="1">{{ t('category.medicalCountValues.1') }}</option>
+            <option value="2-5">{{ t('category.medicalCountValues.2-5') }}</option>
+            <option value="6-10">{{ t('category.medicalCountValues.6-10') }}</option>
+            <option value="10+">{{ t('category.medicalCountValues.10+') }}</option>
+          </select>
+        </div>
+
+        <div v-if="category === 'obstruction'" class="space-y-1.5">
+          <label class="text-sm font-medium text-slate-800">{{ t('category.obstructionTypeLabel') }}</label>
+          <select v-model="obstructionType" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 bg-white">
+            <option value="">{{ t('category.selectObstruction') }}</option>
+            <option value="landslide">{{ t('category.obstructionValues.landslide') }}</option>
+            <option value="debris">{{ t('category.obstructionValues.debris') }}</option>
+            <option value="trees">{{ t('category.obstructionValues.trees') }}</option>
+            <option value="vehicles">{{ t('category.obstructionValues.vehicles') }}</option>
+            <option value="other">{{ t('category.obstructionValues.other') }}</option>
+          </select>
+        </div>
+
         <div class="space-y-1.5">
           <label class="text-sm font-medium text-slate-800">{{ t('report.unit') }} <span class="text-slate-400">({{ t('common.optional') }})</span></label>
           <input v-model="unit" :placeholder="t('report.unitPlaceholder')" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" />
@@ -211,7 +276,12 @@ async function submit() {
           <textarea v-model="description" :placeholder="t('report.descriptionPlaceholder')" rows="3" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" />
         </div>
 
-        <BaseButton block :disabled="lat === null" @click="submit">{{ t('report.submit') }}</BaseButton>
+        <div class="flex gap-2">
+          <BaseButton variant="neutral" @click="step = 2">
+            <span class="inline-flex items-center gap-1"><MaterialIcon name="arrow_back" :size="18" /> {{ t('common.back') }}</span>
+          </BaseButton>
+          <BaseButton class="flex-1" :disabled="lat === null" @click="submit">{{ t('report.submit') }}</BaseButton>
+        </div>
       </section>
     </template>
   </div>

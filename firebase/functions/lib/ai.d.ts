@@ -23,6 +23,10 @@ export interface ImageAnalysisResult {
     lastSeen?: string | null;
     contact?: string | null;
     confidence: number;
+    structuralDamage?: "minor" | "moderate" | "severe" | "collapse" | null;
+    resourceType?: "water" | "food" | "medical" | "shelter" | "tools" | "other" | null;
+    medicalCount?: "1" | "2-5" | "6-10" | "10+" | null;
+    obstructionType?: "landslide" | "debris" | "trees" | "vehicles" | "other" | null;
 }
 export declare function analyzeImage(opts: {
     base64Data: string;

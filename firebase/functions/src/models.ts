@@ -56,6 +56,10 @@ export const reportSchema = z.object({
   subjectDetails: z.string().optional(),    // proxy: age / appearance
   lastSeen: z.string().optional(),          // proxy: when/where last seen
   contact: z.string().optional(),           // proxy: reporter relationship / phone
+  structuralDamage: z.enum(["minor", "moderate", "severe", "collapse"]).optional(),
+  resourceType: z.enum(["water", "food", "medical", "shelter", "tools", "other"]).optional(),
+  medicalCount: z.enum(["1", "2-5", "6-10", "10+"]).optional(),
+  obstructionType: z.enum(["landslide", "debris", "trees", "vehicles", "other"]).optional(),
 });
 
 export const statusSchema = z.object({

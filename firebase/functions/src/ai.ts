@@ -101,6 +101,10 @@ export interface ImageAnalysisResult {
   lastSeen?: string | null;
   contact?: string | null;
   confidence: number;
+  structuralDamage?: "minor" | "moderate" | "severe" | "collapse" | null;
+  resourceType?: "water" | "food" | "medical" | "shelter" | "tools" | "other" | null;
+  medicalCount?: "1" | "2-5" | "6-10" | "10+" | null;
+  obstructionType?: "landslide" | "debris" | "trees" | "vehicles" | "other" | null;
 }
 
 export async function analyzeImage(opts: {
@@ -125,7 +129,11 @@ export async function analyzeImage(opts: {
     "- subjectDetails: string | null (any description of the person: age, clothing, etc.)\n" +
     "- lastSeen: string | null (where/when they were last seen)\n" +
     "- contact: string | null (any contact phone or relationship mentioned)\n" +
-    "- confidence: number (from 0 to 1, representing your confidence that this image depicts a real incident related to a crisis/earthquake)\n\n" +
+    "- confidence: number (from 0 to 1, representing your confidence that this image depicts a real incident related to a crisis/earthquake)\n" +
+    "- structuralDamage: 'minor' | 'moderate' | 'severe' | 'collapse' | null (only if category is 'structural')\n" +
+    "- resourceType: 'water' | 'food' | 'medical' | 'shelter' | 'tools' | 'other' | null (only if category is 'resource')\n" +
+    "- medicalCount: '1' | '2-5' | '6-10' | '10+' | null (only if category is 'medical')\n" +
+    "- obstructionType: 'landslide' | 'debris' | 'trees' | 'vehicles' | 'other' | null (only if category is 'obstruction')\n\n" +
     "Return ONLY the raw JSON object. Do not include markdown code block formatting or any other text.";
 
   const controller = new AbortController();
@@ -176,6 +184,19 @@ export async function analyzeImage(opts: {
       : 3;
     const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0.5;
 
+    const structuralDamage = ["minor", "moderate", "severe", "collapse"].includes(parsed.structuralDamage as string)
+      ? (parsed.structuralDamage as ImageAnalysisResult["structuralDamage"])
+      : null;
+    const resourceType = ["water", "food", "medical", "shelter", "tools", "other"].includes(parsed.resourceType as string)
+      ? (parsed.resourceType as ImageAnalysisResult["resourceType"])
+      : null;
+    const medicalCount = ["1", "2-5", "6-10", "10+"].includes(parsed.medicalCount as string)
+      ? (parsed.medicalCount as ImageAnalysisResult["medicalCount"])
+      : null;
+    const obstructionType = ["landslide", "debris", "trees", "vehicles", "other"].includes(parsed.obstructionType as string)
+      ? (parsed.obstructionType as ImageAnalysisResult["obstructionType"])
+      : null;
+
     return {
       category,
       triageLevel,
@@ -186,6 +207,10 @@ export async function analyzeImage(opts: {
       lastSeen: parsed.lastSeen || null,
       contact: parsed.contact || null,
       confidence,
+      structuralDamage,
+      resourceType,
+      medicalCount,
+      obstructionType,
     };
   } catch (e) {
     logger.warn("gemini image analyze failed", { error: e instanceof Error ? e.message : String(e) });

@@ -32,6 +32,10 @@ export interface Incident {
   // Master Incident: how many reports are grouped here + each report's content.
   count?: number
   reports?: ReportSummary[]
+  structuralDamage?: 'minor' | 'moderate' | 'severe' | 'collapse'
+  resourceType?: 'water' | 'food' | 'medical' | 'shelter' | 'tools' | 'other'
+  medicalCount?: '1' | '2-5' | '6-10' | '10+'
+  obstructionType?: 'landslide' | 'debris' | 'trees' | 'vehicles' | 'other'
 }
 
 export interface ReportSummary {
@@ -59,6 +63,10 @@ export interface ReportPayload {
   subjectDetails?: string
   lastSeen?: string
   contact?: string
+  structuralDamage?: 'minor' | 'moderate' | 'severe' | 'collapse'
+  resourceType?: 'water' | 'food' | 'medical' | 'shelter' | 'tools' | 'other'
+  medicalCount?: '1' | '2-5' | '6-10' | '10+'
+  obstructionType?: 'landslide' | 'debris' | 'trees' | 'vehicles' | 'other'
 }
 
 export const useIncidentsStore = defineStore('incidents', () => {

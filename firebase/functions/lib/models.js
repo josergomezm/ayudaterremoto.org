@@ -49,6 +49,10 @@ exports.reportSchema = zod_1.z.object({
     subjectDetails: zod_1.z.string().optional(), // proxy: age / appearance
     lastSeen: zod_1.z.string().optional(), // proxy: when/where last seen
     contact: zod_1.z.string().optional(), // proxy: reporter relationship / phone
+    structuralDamage: zod_1.z.enum(["minor", "moderate", "severe", "collapse"]).optional(),
+    resourceType: zod_1.z.enum(["water", "food", "medical", "shelter", "tools", "other"]).optional(),
+    medicalCount: zod_1.z.enum(["1", "2-5", "6-10", "10+"]).optional(),
+    obstructionType: zod_1.z.enum(["landslide", "debris", "trees", "vehicles", "other"]).optional(),
 });
 exports.statusSchema = zod_1.z.object({
     status: zod_1.z.enum(["green", "yellow", "red"]),

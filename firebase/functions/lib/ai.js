@@ -98,7 +98,11 @@ async function analyzeImage(opts) {
         "- subjectDetails: string | null (any description of the person: age, clothing, etc.)\n" +
         "- lastSeen: string | null (where/when they were last seen)\n" +
         "- contact: string | null (any contact phone or relationship mentioned)\n" +
-        "- confidence: number (from 0 to 1, representing your confidence that this image depicts a real incident related to a crisis/earthquake)\n\n" +
+        "- confidence: number (from 0 to 1, representing your confidence that this image depicts a real incident related to a crisis/earthquake)\n" +
+        "- structuralDamage: 'minor' | 'moderate' | 'severe' | 'collapse' | null (only if category is 'structural')\n" +
+        "- resourceType: 'water' | 'food' | 'medical' | 'shelter' | 'tools' | 'other' | null (only if category is 'resource')\n" +
+        "- medicalCount: '1' | '2-5' | '6-10' | '10+' | null (only if category is 'medical')\n" +
+        "- obstructionType: 'landslide' | 'debris' | 'trees' | 'vehicles' | 'other' | null (only if category is 'obstruction')\n\n" +
         "Return ONLY the raw JSON object. Do not include markdown code block formatting or any other text.";
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000); // 10s timeout for image analysis
@@ -144,6 +148,18 @@ async function analyzeImage(opts) {
             ? parsed.triageLevel
             : 3;
         const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0.5;
+        const structuralDamage = ["minor", "moderate", "severe", "collapse"].includes(parsed.structuralDamage)
+            ? parsed.structuralDamage
+            : null;
+        const resourceType = ["water", "food", "medical", "shelter", "tools", "other"].includes(parsed.resourceType)
+            ? parsed.resourceType
+            : null;
+        const medicalCount = ["1", "2-5", "6-10", "10+"].includes(parsed.medicalCount)
+            ? parsed.medicalCount
+            : null;
+        const obstructionType = ["landslide", "debris", "trees", "vehicles", "other"].includes(parsed.obstructionType)
+            ? parsed.obstructionType
+            : null;
         return {
             category,
             triageLevel,
@@ -154,6 +170,10 @@ async function analyzeImage(opts) {
             lastSeen: parsed.lastSeen || null,
             contact: parsed.contact || null,
             confidence,
+            structuralDamage,
+            resourceType,
+            medicalCount,
+            obstructionType,
         };
     }
     catch (e) {

@@ -350,6 +350,10 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         aiFlagged: aiResult.confidence > 0.7,
         aiSeverity: aiResult.triageLevel <= 2 ? "high" : "moderate",
         aiReason: `Análisis de imagen: ${aiResult.category}. Confianza: ${Math.round(aiResult.confidence * 100)}%`,
+        structuralDamage: aiResult.structuralDamage || undefined,
+        resourceType: aiResult.resourceType || undefined,
+        medicalCount: aiResult.medicalCount || undefined,
+        obstructionType: aiResult.obstructionType || undefined,
       };
 
       // Suggest a Master Incident to merge into
@@ -383,6 +387,10 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         reporterId: actor.id, reporterName: actor.name, evacuated: false, resolved: false, resolutionConfirmed: null,
         createdAt: new Date().toISOString(),
         clusterId: id,
+        structuralDamage: r.structuralDamage,
+        resourceType: r.resourceType,
+        medicalCount: r.medicalCount,
+        obstructionType: r.obstructionType,
       };
 
       // Suggest a Master Incident to merge into (conservative — see resolveClusterId).

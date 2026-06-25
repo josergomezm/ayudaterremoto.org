@@ -60,6 +60,10 @@ export interface Incident {
     aiFlagged?: boolean;
     aiSeverity?: string;
     aiReason?: string;
+    structuralDamage?: "minor" | "moderate" | "severe" | "collapse";
+    resourceType?: "water" | "food" | "medical" | "shelter" | "tools" | "other";
+    medicalCount?: "1" | "2-5" | "6-10" | "10+";
+    obstructionType?: "landslide" | "debris" | "trees" | "vehicles" | "other";
 }
 export interface MissingPerson {
     id: string;
