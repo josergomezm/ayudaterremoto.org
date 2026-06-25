@@ -2,10 +2,9 @@ import { onRequest, type Request } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { defineSecret } from "firebase-functions/params";
 import { randomBytes, randomUUID } from "node:crypto";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 
 import { applyCors } from "./helpers/cors";
-import { activeProvider, buildNameOptions } from "./identity/provider";
 import { assessReport, severityToLevel, distanceMeters, analyzeImage, geocodeAddress, analyzePatientList, fuzzyNameMatch } from "./ai";
 import { db } from "./firebase";
 import { getActor, getFirebaseUser, hasRole } from "./auth";
@@ -49,10 +48,10 @@ async function resolveClusterId(
   return ownId;
 }
 import type {
-  Incident, Announcement, VouchCode, PendingChallenge, AdminUser, FieldSession, AccessRequest, MissingPerson, LocationRequest, AdmittedPatient,
+  Incident, Announcement, VouchCode, AdminUser, AccessRequest, MissingPerson, LocationRequest, AdmittedPatient,
 } from "./types";
 import {
-  echoSchema, verifyLookupSchema, verifyConfirmSchema,
+  echoSchema,
   reportSchema, statusSchema, resolutionConfirmSchema, announcementSchema,
   adminUserSchema, adminEmailSchema, accessRequestSchema, missingPersonSchema, missingFoundSchema,
   locationRequestSchema, locationResolveSchema, admittedPatientSchema, hospitalInputSchema,
@@ -92,59 +91,41 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       return send(200, { success: true, echoed: echoSchema.parse(req.body) });
     }
 
-    // ── Verification step 1: lookup + name-match grid ────────────────────
-    if (m === "POST" && path === "/verify/lookup") {
-      const { nac, dni } = verifyLookupSchema.parse(req.body);
-      const record = await activeProvider.lookup(nac, dni);
-      if (!record) {
-        return send(404, { error: "not_registered", message: "Cédula no inscrita. Use el código de aval.", fallback: "vouch" });
-      }
-      const challengeId = randomUUID();
-      const options = buildNameOptions(record.fullname, challengeId);
-      const challenge: PendingChallenge = { dni, nac, correctName: record.fullname, expiresAt: Date.now() + CHALLENGE_TTL_MS };
-      await db.doc(`challenges/${challengeId}`).set(challenge);
-      // The correct name is deliberately NOT returned to the client — EXCEPT in
-      // the emulator, where the CNE is stubbed and a tester can't know the
-      // synthesized name. `hint` is never included in production.
-      return send(200, { challengeId, options, ...(IS_EMULATOR ? { hint: record.fullname } : {}) });
+    // ── Unified User Profile (any Google-authenticated user) ─────────────
+    if (m === "GET" && path === "/auth/me") {
+      const actor = await getActor(req);
+      if (!actor) return send(401, { error: "unauthenticated", message: "Inicie sesión con Google." });
+      return send(200, { role: actor.role, email: actor.id, name: actor.name });
     }
 
-    // ── Verification step 2: confirm name, optionally redeem a vouch code ─
-    if (m === "POST" && path === "/verify/confirm") {
-      const { challengeId, selectedName, vouchCode } = verifyConfirmSchema.parse(req.body);
-      const ref = db.doc(`challenges/${challengeId}`);
-      const snap = await ref.get();
-      if (!snap.exists) return send(410, { error: "challenge_expired", message: "Verificación expirada. Intente de nuevo." });
-      const ch = snap.data() as PendingChallenge;
-      if (ch.expiresAt < Date.now()) {
-        await ref.delete();
-        return send(410, { error: "challenge_expired", message: "Verificación expirada. Intente de nuevo." });
-      }
-      if (selectedName !== ch.correctName) {
-        await ref.delete(); // single attempt → forces cooldown + re-lookup
-        logger.warn("verification_failed", { dni: ch.dni });
-        await logAudit({ id: ch.dni, role: "civilian", kind: "field" }, "verify_failed");
-        return send(401, { error: "verification_failed", message: "Nombre incorrecto.", cooldownMs: 30000 });
+    // ── Redeem vouch code (any Google-authenticated user) ────────────────
+    if (m === "POST" && path === "/verify/redeem-vouch") {
+      const fbUser = await getFirebaseUser(req);
+      if (!fbUser) return send(401, { error: "unauthenticated", message: "Inicie sesión con Google primero." });
+
+      const { vouchCode } = z.object({ vouchCode: z.string().min(1) }).parse(req.body);
+      const codeRef = db.doc(`vouchCodes/${vouchCode.toUpperCase()}`);
+      const codeSnap = await codeRef.get();
+      const vc = codeSnap.exists ? (codeSnap.data() as VouchCode) : null;
+      if (!vc || vc.used) return send(400, { error: "invalid_vouch_code", message: "Código de aval inválido o ya usado." });
+
+      // Check if user is already an admin
+      const adminSnap = db.doc(`adminUsers/${fbUser.email}`);
+      const adminDoc = await adminSnap.get();
+      if (adminDoc.exists) {
+        return send(400, { error: "already_admin", message: "Ya eres administrador." });
       }
 
-      let role: FieldSession["role"] = "civilian";
-      if (vouchCode) {
-        const codeRef = db.doc(`vouchCodes/${vouchCode.toUpperCase()}`);
-        const codeSnap = await codeRef.get();
-        const vc = codeSnap.exists ? (codeSnap.data() as VouchCode) : null;
-        if (!vc || vc.used) return send(400, { error: "invalid_vouch_code", message: "Código de aval inválido o ya usado." });
-        role = "responder"; // vouch codes only ever grant Responder
-        await codeRef.update({ used: true });
-        await db.collection("vouchAudit").add({ voucher: vc.voucher, voucheeDni: ch.dni, timestamp: new Date().toISOString() });
-        await logAudit({ id: ch.dni, role, kind: "field" }, "vouch_redeem", { type: "vouchCode", id: vouchCode.toUpperCase() }, { voucher: vc.voucher });
-      }
+      // Upgrade role to responder in users collection
+      const userRef = db.doc(`users/${fbUser.email}`);
+      await userRef.set({ email: fbUser.email, role: "responder", name: fbUser.name, updatedAt: new Date().toISOString() });
 
-      await ref.delete();
-      const token = randomUUID();
-      const session: FieldSession = { dni: ch.dni, name: ch.correctName, role };
-      await db.doc(`sessions/${token}`).set(session);
-      await logAudit({ id: ch.dni, role, kind: "field" }, "verify_success", undefined, { role });
-      return send(200, { token, role, name: ch.correctName });
+      // Mark vouch code as used
+      await codeRef.update({ used: true });
+      await db.collection("vouchAudit").add({ voucher: vc.voucher, voucheeEmail: fbUser.email, timestamp: new Date().toISOString() });
+      await logAudit({ id: fbUser.email, role: "responder", kind: "field" }, "vouch_redeem", { type: "vouchCode", id: vouchCode.toUpperCase() }, { voucher: vc.voucher });
+
+      return send(200, { role: "responder" });
     }
 
     // ── Admin: who am I (role gate for the portal) ───────────────────────
@@ -729,7 +710,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       message: `No route for ${m} ${path}`,
       routes: [
         "GET /health", "POST /echo",
-        "POST /verify/lookup", "POST /verify/confirm",
+        "GET /auth/me", "POST /verify/redeem-vouch",
         "GET /admin/me", "POST /vouch/generate", "GET /vouch/audit", "GET /admin/audit",
         "GET /admin/users", "POST /admin/users", "POST /admin/users/remove",
         "GET|POST /access-request", "GET /admin/requests",

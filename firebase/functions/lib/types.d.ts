@@ -3,17 +3,6 @@ export type AdminRole = "authority" | "command";
 export type TriageStatus = "green" | "yellow" | "red";
 export type ReportCategory = "medical" | "structural" | "obstruction" | "resource";
 export declare const ROLE_RANK: Record<Role, number>;
-export interface FieldSession {
-    dni: string;
-    name: string;
-    role: Role;
-}
-export interface PendingChallenge {
-    dni: string;
-    nac: "V" | "E";
-    correctName: string;
-    expiresAt: number;
-}
 export interface VouchCode {
     code: string;
     used: boolean;
@@ -22,7 +11,7 @@ export interface VouchCode {
 }
 export interface VouchAuditEntry {
     voucher: string;
-    voucheeDni: string;
+    voucheeEmail: string;
     timestamp: string;
 }
 export interface AdminUser {

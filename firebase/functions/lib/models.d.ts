@@ -9,29 +9,6 @@ export declare const echoSchema: z.ZodObject<{
     message: string;
     name?: string | undefined;
 }>;
-export declare const verifyLookupSchema: z.ZodObject<{
-    nac: z.ZodEnum<["V", "E"]>;
-    dni: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    nac: "V" | "E";
-    dni: string;
-}, {
-    nac: "V" | "E";
-    dni: string;
-}>;
-export declare const verifyConfirmSchema: z.ZodObject<{
-    challengeId: z.ZodString;
-    selectedName: z.ZodString;
-    vouchCode: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    challengeId: string;
-    selectedName: string;
-    vouchCode?: string | undefined;
-}, {
-    challengeId: string;
-    selectedName: string;
-    vouchCode?: string | undefined;
-}>;
 export declare const adminUserSchema: z.ZodObject<{
     email: z.ZodString;
     role: z.ZodEnum<["authority", "command"]>;

@@ -6,10 +6,6 @@ export interface Actor {
     id: string;
     name?: string;
 }
-/**
- * Resolve the caller. Tries the admin tier first (a Firebase ID token), then the
- * field tier (a device-token session). Returns null if neither matches.
- */
 export declare function getActor(req: Request): Promise<Actor | null>;
 export declare function hasRole(actor: Actor | null, min: Role): boolean;
 export interface FirebaseUser {

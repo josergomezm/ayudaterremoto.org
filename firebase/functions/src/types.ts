@@ -10,19 +10,6 @@ export const ROLE_RANK: Record<Role, number> = {
   civilian: 0, responder: 1, authority: 2, command: 3,
 };
 
-export interface FieldSession {
-  dni: string;
-  name: string;
-  role: Role; // field tier only ever holds civilian | responder
-}
-
-export interface PendingChallenge {
-  dni: string;
-  nac: "V" | "E";
-  correctName: string;
-  expiresAt: number;
-}
-
 export interface VouchCode {
   code: string;
   used: boolean;
@@ -32,7 +19,7 @@ export interface VouchCode {
 
 export interface VouchAuditEntry {
   voucher: string;     // admin who issued the redeemed code
-  voucheeDni: string;  // field user who redeemed it
+  voucheeEmail: string; // field user who redeemed it
   timestamp: string;
 }
 

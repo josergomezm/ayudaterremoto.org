@@ -7,7 +7,6 @@ const params_1 = require("firebase-functions/params");
 const node_crypto_1 = require("node:crypto");
 const zod_1 = require("zod");
 const cors_1 = require("./helpers/cors");
-const provider_1 = require("./identity/provider");
 const ai_1 = require("./ai");
 const firebase_1 = require("./firebase");
 const auth_1 = require("./auth");
@@ -80,58 +79,38 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
         if (m === "POST" && path === "/echo") {
             return send(200, { success: true, echoed: models_1.echoSchema.parse(req.body) });
         }
-        // ── Verification step 1: lookup + name-match grid ────────────────────
-        if (m === "POST" && path === "/verify/lookup") {
-            const { nac, dni } = models_1.verifyLookupSchema.parse(req.body);
-            const record = await provider_1.activeProvider.lookup(nac, dni);
-            if (!record) {
-                return send(404, { error: "not_registered", message: "Cédula no inscrita. Use el código de aval.", fallback: "vouch" });
-            }
-            const challengeId = (0, node_crypto_1.randomUUID)();
-            const options = (0, provider_1.buildNameOptions)(record.fullname, challengeId);
-            const challenge = { dni, nac, correctName: record.fullname, expiresAt: Date.now() + CHALLENGE_TTL_MS };
-            await firebase_1.db.doc(`challenges/${challengeId}`).set(challenge);
-            // The correct name is deliberately NOT returned to the client — EXCEPT in
-            // the emulator, where the CNE is stubbed and a tester can't know the
-            // synthesized name. `hint` is never included in production.
-            return send(200, { challengeId, options, ...(IS_EMULATOR ? { hint: record.fullname } : {}) });
+        // ── Unified User Profile (any Google-authenticated user) ─────────────
+        if (m === "GET" && path === "/auth/me") {
+            const actor = await (0, auth_1.getActor)(req);
+            if (!actor)
+                return send(401, { error: "unauthenticated", message: "Inicie sesión con Google." });
+            return send(200, { role: actor.role, email: actor.id, name: actor.name });
         }
-        // ── Verification step 2: confirm name, optionally redeem a vouch code ─
-        if (m === "POST" && path === "/verify/confirm") {
-            const { challengeId, selectedName, vouchCode } = models_1.verifyConfirmSchema.parse(req.body);
-            const ref = firebase_1.db.doc(`challenges/${challengeId}`);
-            const snap = await ref.get();
-            if (!snap.exists)
-                return send(410, { error: "challenge_expired", message: "Verificación expirada. Intente de nuevo." });
-            const ch = snap.data();
-            if (ch.expiresAt < Date.now()) {
-                await ref.delete();
-                return send(410, { error: "challenge_expired", message: "Verificación expirada. Intente de nuevo." });
+        // ── Redeem vouch code (any Google-authenticated user) ────────────────
+        if (m === "POST" && path === "/verify/redeem-vouch") {
+            const fbUser = await (0, auth_1.getFirebaseUser)(req);
+            if (!fbUser)
+                return send(401, { error: "unauthenticated", message: "Inicie sesión con Google primero." });
+            const { vouchCode } = zod_1.z.object({ vouchCode: zod_1.z.string().min(1) }).parse(req.body);
+            const codeRef = firebase_1.db.doc(`vouchCodes/${vouchCode.toUpperCase()}`);
+            const codeSnap = await codeRef.get();
+            const vc = codeSnap.exists ? codeSnap.data() : null;
+            if (!vc || vc.used)
+                return send(400, { error: "invalid_vouch_code", message: "Código de aval inválido o ya usado." });
+            // Check if user is already an admin
+            const adminSnap = firebase_1.db.doc(`adminUsers/${fbUser.email}`);
+            const adminDoc = await adminSnap.get();
+            if (adminDoc.exists) {
+                return send(400, { error: "already_admin", message: "Ya eres administrador." });
             }
-            if (selectedName !== ch.correctName) {
-                await ref.delete(); // single attempt → forces cooldown + re-lookup
-                v2_1.logger.warn("verification_failed", { dni: ch.dni });
-                await (0, audit_1.logAudit)({ id: ch.dni, role: "civilian", kind: "field" }, "verify_failed");
-                return send(401, { error: "verification_failed", message: "Nombre incorrecto.", cooldownMs: 30000 });
-            }
-            let role = "civilian";
-            if (vouchCode) {
-                const codeRef = firebase_1.db.doc(`vouchCodes/${vouchCode.toUpperCase()}`);
-                const codeSnap = await codeRef.get();
-                const vc = codeSnap.exists ? codeSnap.data() : null;
-                if (!vc || vc.used)
-                    return send(400, { error: "invalid_vouch_code", message: "Código de aval inválido o ya usado." });
-                role = "responder"; // vouch codes only ever grant Responder
-                await codeRef.update({ used: true });
-                await firebase_1.db.collection("vouchAudit").add({ voucher: vc.voucher, voucheeDni: ch.dni, timestamp: new Date().toISOString() });
-                await (0, audit_1.logAudit)({ id: ch.dni, role, kind: "field" }, "vouch_redeem", { type: "vouchCode", id: vouchCode.toUpperCase() }, { voucher: vc.voucher });
-            }
-            await ref.delete();
-            const token = (0, node_crypto_1.randomUUID)();
-            const session = { dni: ch.dni, name: ch.correctName, role };
-            await firebase_1.db.doc(`sessions/${token}`).set(session);
-            await (0, audit_1.logAudit)({ id: ch.dni, role, kind: "field" }, "verify_success", undefined, { role });
-            return send(200, { token, role, name: ch.correctName });
+            // Upgrade role to responder in users collection
+            const userRef = firebase_1.db.doc(`users/${fbUser.email}`);
+            await userRef.set({ email: fbUser.email, role: "responder", name: fbUser.name, updatedAt: new Date().toISOString() });
+            // Mark vouch code as used
+            await codeRef.update({ used: true });
+            await firebase_1.db.collection("vouchAudit").add({ voucher: vc.voucher, voucheeEmail: fbUser.email, timestamp: new Date().toISOString() });
+            await (0, audit_1.logAudit)({ id: fbUser.email, role: "responder", kind: "field" }, "vouch_redeem", { type: "vouchCode", id: vouchCode.toUpperCase() }, { voucher: vc.voucher });
+            return send(200, { role: "responder" });
         }
         // ── Admin: who am I (role gate for the portal) ───────────────────────
         if (m === "GET" && path === "/admin/me") {
@@ -710,7 +689,7 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
             message: `No route for ${m} ${path}`,
             routes: [
                 "GET /health", "POST /echo",
-                "POST /verify/lookup", "POST /verify/confirm",
+                "GET /auth/me", "POST /verify/redeem-vouch",
                 "GET /admin/me", "POST /vouch/generate", "GET /vouch/audit", "GET /admin/audit",
                 "GET /admin/users", "POST /admin/users", "POST /admin/users/remove",
                 "GET|POST /access-request", "GET /admin/requests",

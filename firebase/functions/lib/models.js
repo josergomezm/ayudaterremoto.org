@@ -1,25 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hospitalInputSchema = exports.admittedPatientSchema = exports.locationResolveSchema = exports.locationRequestSchema = exports.missingFoundSchema = exports.missingPersonSchema = exports.announcementSchema = exports.resolutionConfirmSchema = exports.statusSchema = exports.reportSchema = exports.accessRequestSchema = exports.adminEmailSchema = exports.adminUserSchema = exports.verifyConfirmSchema = exports.verifyLookupSchema = exports.echoSchema = void 0;
+exports.hospitalInputSchema = exports.admittedPatientSchema = exports.locationResolveSchema = exports.locationRequestSchema = exports.missingFoundSchema = exports.missingPersonSchema = exports.announcementSchema = exports.resolutionConfirmSchema = exports.statusSchema = exports.reportSchema = exports.accessRequestSchema = exports.adminEmailSchema = exports.adminUserSchema = exports.echoSchema = void 0;
 const zod_1 = require("zod");
 // One zod schema per endpoint body. Add new endpoints' schemas here, then a
 // matching route branch in api.ts (see README "How to add an API endpoint").
 exports.echoSchema = zod_1.z.object({
     message: zod_1.z.string().min(1),
     name: zod_1.z.string().optional(),
-});
-const nacSchema = zod_1.z.enum(["V", "E"]);
-const dniSchema = zod_1.z.string().regex(/^\d{6,9}$/, "Cédula must be 6–9 digits");
-// Verification — step 1: look up a Cédula and get the name-match grid.
-exports.verifyLookupSchema = zod_1.z.object({
-    nac: nacSchema,
-    dni: dniSchema,
-});
-// Verification — step 2: pick the right name, optionally redeem a vouch code.
-exports.verifyConfirmSchema = zod_1.z.object({
-    challengeId: zod_1.z.string().min(1),
-    selectedName: zod_1.z.string().min(1),
-    vouchCode: zod_1.z.string().optional(),
 });
 // Vouch codes always grant the Responder role, so generation needs no body.
 // Admin-role management (Command only):

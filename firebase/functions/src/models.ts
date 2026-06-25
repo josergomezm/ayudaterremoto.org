@@ -8,21 +8,7 @@ export const echoSchema = z.object({
   name: z.string().optional(),
 });
 
-const nacSchema = z.enum(["V", "E"]);
-const dniSchema = z.string().regex(/^\d{6,9}$/, "Cédula must be 6–9 digits");
 
-// Verification — step 1: look up a Cédula and get the name-match grid.
-export const verifyLookupSchema = z.object({
-  nac: nacSchema,
-  dni: dniSchema,
-});
-
-// Verification — step 2: pick the right name, optionally redeem a vouch code.
-export const verifyConfirmSchema = z.object({
-  challengeId: z.string().min(1),
-  selectedName: z.string().min(1),
-  vouchCode: z.string().optional(),
-});
 
 // Vouch codes always grant the Responder role, so generation needs no body.
 // Admin-role management (Command only):

@@ -38,7 +38,7 @@ export const useAdminStore = defineStore('admin', () => {
   })
 
   async function fetchRole(): Promise<Role | null> {
-    const r = await adminFetch<{ role: Role }>('/admin/me')
+    const r = await adminFetch<{ role: Role }>('/auth/me')
     return r.ok ? r.data.role : null
   }
 

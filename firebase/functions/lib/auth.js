@@ -9,37 +9,34 @@ function bearer(req) {
     const a = req.headers.authorization;
     return typeof a === "string" && a.startsWith("Bearer ") ? a.slice(7) : null;
 }
-/**
- * Resolve the caller. Tries the admin tier first (a Firebase ID token), then the
- * field tier (a device-token session). Returns null if neither matches.
- */
 async function getActor(req) {
     const token = bearer(req);
     if (!token)
         return null;
-    // Admin tier — a Firebase ID token. verifyIdToken throws on a non-JWT, so a
-    // field device token simply falls through to the next block.
     try {
         const decoded = await firebase_1.adminAuth.verifyIdToken(token);
         const email = decoded.email?.toLowerCase();
         if (email) {
+            // 1. Check adminUsers (authority/command)
             const snap = await firebase_1.db.doc(`adminUsers/${email}`).get();
             if (snap.exists) {
                 const role = snap.data().role;
                 return { role, kind: "admin", id: email, name: decoded.name ?? email };
             }
+            // 2. Check users (vouched responders)
+            const userSnap = await firebase_1.db.doc(`users/${email}`).get();
+            if (userSnap.exists) {
+                const role = userSnap.data().role;
+                return { role, kind: "field", id: email, name: decoded.name ?? email };
+            }
+            // 3. Default to civilian for other Google users
+            return { role: "civilian", kind: "field", id: email, name: decoded.name ?? email };
         }
-        return null; // authenticated with Google but not an authorized admin
+        return null;
     }
     catch {
-        /* not a Firebase token — treat as a field session token */
+        return null;
     }
-    const s = await firebase_1.db.doc(`sessions/${token}`).get();
-    if (s.exists) {
-        const d = s.data();
-        return { role: d.role, kind: "field", id: d.dni, name: d.name };
-    }
-    return null;
 }
 function hasRole(actor, min) {
     return actor !== null && types_1.ROLE_RANK[actor.role] >= types_1.ROLE_RANK[min];

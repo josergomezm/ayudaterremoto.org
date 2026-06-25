@@ -1,55 +1,94 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { apiFetch, setAuthToken } from '../lib/api'
+import { apiFetch } from '../lib/api'
+import { auth, googleProvider } from '../lib/firebase'
+import { signInWithPopup, signOut as fbSignOut, onAuthStateChanged, type User } from 'firebase/auth'
 
 export type Role = 'civilian' | 'responder' | 'authority' | 'command'
 const RANK: Record<Role, number> = { civilian: 0, responder: 1, authority: 2, command: 3 }
 
-interface LookupResult { ok: boolean; challengeId?: string; options?: string[]; error?: string; notRegistered?: boolean; hint?: string }
-interface ConfirmResult { ok: boolean; role?: Role; name?: string; error?: string; cooldownMs?: number }
-
-// NOTE: identity is a SOFT GATE for accountability, not authentication. Real
-// trust comes from the vouch chain enforced server-side. See CLAUDE.md.
 export const useSessionStore = defineStore('session', () => {
-  const token = ref<string | null>(null)
+  const user = ref<User | null>(null)
   const role = ref<Role | null>(null)
   const name = ref<string | null>(null)
+  const email = ref<string | null>(null)
+  const ready = ref(false)
 
-  const isVerified = computed(() => token.value !== null)
+  const isVerified = computed(() => user.value !== null)
+
   function can(min: Role): boolean {
     return role.value !== null && RANK[role.value] >= RANK[min]
   }
 
-  async function lookup(nac: 'V' | 'E', dni: string): Promise<LookupResult> {
-    const res = await apiFetch<{ challengeId: string; options: string[]; hint?: string }>('/verify/lookup', {
-      method: 'POST',
-      body: JSON.stringify({ nac, dni }),
+  async function fetchProfile(): Promise<{ role: Role; name: string; email: string } | null> {
+    const fbUser = auth.currentUser
+    if (!fbUser) return null
+    const token = await fbUser.getIdToken()
+    const res = await apiFetch<{ role: Role; name: string; email: string }>('/auth/me', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     })
-    if (res.ok) return { ok: true, challengeId: res.data.challengeId, options: res.data.options, hint: res.data.hint }
-    return { ok: false, error: res.error, notRegistered: res.status === 404 }
+    if (res.ok) return res.data
+    return null
   }
 
-  async function confirm(challengeId: string, selectedName: string, vouchCode?: string): Promise<ConfirmResult> {
-    const res = await apiFetch<{ token: string; role: Role; name: string }>('/verify/confirm', {
+  onAuthStateChanged(auth, async (u) => {
+    user.value = u
+    if (u) {
+      const profile = await fetchProfile()
+      if (profile) {
+        role.value = profile.role
+        name.value = profile.name
+        email.value = profile.email
+      } else {
+        // Fallback profile if server is not responding yet
+        role.value = 'civilian'
+        name.value = u.displayName || u.email || 'Google User'
+        email.value = u.email
+      }
+    } else {
+      role.value = null
+      name.value = null
+      email.value = null
+    }
+    ready.value = true
+  })
+
+  async function signIn() {
+    await signInWithPopup(auth, googleProvider)
+    const profile = await fetchProfile()
+    if (profile) {
+      role.value = profile.role
+      name.value = profile.name
+      email.value = profile.email
+    }
+  }
+
+  async function signOut() {
+    await fbSignOut(auth)
+    role.value = null
+    name.value = null
+    email.value = null
+  }
+
+  async function redeemVouch(code: string): Promise<{ ok: boolean; error?: string }> {
+    const fbUser = auth.currentUser
+    if (!fbUser) return { ok: false, error: 'Inicie sesión primero' }
+    const token = await fbUser.getIdToken()
+    const res = await apiFetch<{ role: Role }>('/verify/redeem-vouch', {
       method: 'POST',
-      body: JSON.stringify({ challengeId, selectedName, vouchCode: vouchCode || undefined }),
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ vouchCode: code }),
     })
     if (res.ok) {
-      token.value = res.data.token
       role.value = res.data.role
-      name.value = res.data.name
-      setAuthToken(res.data.token)
-      return { ok: true, role: res.data.role, name: res.data.name }
+      return { ok: true }
     }
     return { ok: false, error: res.error }
   }
 
-  function logout() {
-    token.value = null
-    role.value = null
-    name.value = null
-    setAuthToken(null)
-  }
-
-  return { token, role, name, isVerified, can, lookup, confirm, logout }
+  return { user, role, name, email, ready, isVerified, can, signIn, signOut, redeemVouch }
 })

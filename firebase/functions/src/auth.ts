@@ -1,6 +1,6 @@
 import type { Request } from "firebase-functions/v2/https";
 import { adminAuth, db } from "./firebase";
-import { ROLE_RANK, type Role, type AdminRole, type FieldSession } from "./types";
+import { ROLE_RANK, type Role, type AdminRole } from "./types";
 
 // Unified actor: either an admin (Firebase Auth + adminUsers role) or a field-tier
 // user (device-token session). Routes check capability via hasRole().
@@ -16,37 +16,35 @@ function bearer(req: Request): string | null {
   return typeof a === "string" && a.startsWith("Bearer ") ? a.slice(7) : null;
 }
 
-/**
- * Resolve the caller. Tries the admin tier first (a Firebase ID token), then the
- * field tier (a device-token session). Returns null if neither matches.
- */
 export async function getActor(req: Request): Promise<Actor | null> {
   const token = bearer(req);
   if (!token) return null;
 
-  // Admin tier — a Firebase ID token. verifyIdToken throws on a non-JWT, so a
-  // field device token simply falls through to the next block.
   try {
     const decoded = await adminAuth.verifyIdToken(token);
     const email = decoded.email?.toLowerCase();
     if (email) {
+      // 1. Check adminUsers (authority/command)
       const snap = await db.doc(`adminUsers/${email}`).get();
       if (snap.exists) {
         const role = (snap.data() as { role: AdminRole }).role;
         return { role, kind: "admin", id: email, name: decoded.name ?? email };
       }
-    }
-    return null; // authenticated with Google but not an authorized admin
-  } catch {
-    /* not a Firebase token — treat as a field session token */
-  }
 
-  const s = await db.doc(`sessions/${token}`).get();
-  if (s.exists) {
-    const d = s.data() as FieldSession;
-    return { role: d.role, kind: "field", id: d.dni, name: d.name };
+      // 2. Check users (vouched responders)
+      const userSnap = await db.doc(`users/${email}`).get();
+      if (userSnap.exists) {
+        const role = (userSnap.data() as { role: Role }).role;
+        return { role, kind: "field", id: email, name: decoded.name ?? email };
+      }
+
+      // 3. Default to civilian for other Google users
+      return { role: "civilian", kind: "field", id: email, name: decoded.name ?? email };
+    }
+    return null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 export function hasRole(actor: Actor | null, min: Role): boolean {
