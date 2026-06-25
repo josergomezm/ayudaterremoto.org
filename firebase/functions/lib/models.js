@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.missingFoundSchema = exports.missingPersonSchema = exports.announcementSchema = exports.resolutionConfirmSchema = exports.statusSchema = exports.reportSchema = exports.accessRequestSchema = exports.adminEmailSchema = exports.adminUserSchema = exports.verifyConfirmSchema = exports.verifyLookupSchema = exports.echoSchema = void 0;
+exports.hospitalInputSchema = exports.admittedPatientSchema = exports.locationResolveSchema = exports.locationRequestSchema = exports.missingFoundSchema = exports.missingPersonSchema = exports.announcementSchema = exports.resolutionConfirmSchema = exports.statusSchema = exports.reportSchema = exports.accessRequestSchema = exports.adminEmailSchema = exports.adminUserSchema = exports.verifyConfirmSchema = exports.verifyLookupSchema = exports.echoSchema = void 0;
 const zod_1 = require("zod");
 // One zod schema per endpoint body. Add new endpoints' schemas here, then a
 // matching route branch in api.ts (see README "How to add an API endpoint").
@@ -63,6 +63,7 @@ exports.announcementSchema = zod_1.z.object({
 // Report a missing person (verified users). Reading the list is public.
 exports.missingPersonSchema = zod_1.z.object({
     name: zod_1.z.string().min(1),
+    dni: zod_1.z.string().optional(),
     details: zod_1.z.string().optional(),
     address: zod_1.z.string().optional(),
     lastSeen: zod_1.z.string().optional(),
@@ -78,4 +79,27 @@ exports.missingPersonSchema = zod_1.z.object({
 exports.missingFoundSchema = zod_1.z.object({
     byPhone: zod_1.z.string().optional(),
     note: zod_1.z.string().optional(),
+});
+exports.locationRequestSchema = zod_1.z.object({
+    buildingName: zod_1.z.string().min(3),
+    address: zod_1.z.string().optional(),
+    lat: zod_1.z.number().min(-90).max(90).optional(),
+    lng: zod_1.z.number().min(-180).max(180).optional(),
+    note: zod_1.z.string().optional(),
+    contactPhone: zod_1.z.string().optional(),
+});
+exports.locationResolveSchema = zod_1.z.object({
+    condition: zod_1.z.enum(["safe", "damaged", "collapsed", "unknown"]),
+    note: zod_1.z.string().min(5),
+});
+exports.admittedPatientSchema = zod_1.z.object({
+    name: zod_1.z.string().min(2),
+    dni: zod_1.z.string().optional(),
+    hospitalName: zod_1.z.string().min(2),
+    notes: zod_1.z.string().optional(),
+});
+exports.hospitalInputSchema = zod_1.z.object({
+    hospitalName: zod_1.z.string().min(2),
+    textInput: zod_1.z.string().optional(),
+    imageBase64: zod_1.z.string().optional(),
 });

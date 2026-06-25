@@ -25,7 +25,7 @@ const nav = [
   { name: 'report', to: '/report', label: 'shell.nav.report', icon: 'add_circle' },
   { name: 'alerts', to: '/alerts', label: 'shell.nav.alerts', icon: 'campaign' },
   { name: 'guides', to: '/guides', label: 'shell.nav.guides', icon: 'menu_book' },
-  { name: 'missing', to: '/missing', label: 'shell.nav.people', icon: 'person_search' },
+  { name: 'people', to: '/people', label: 'shell.nav.people', icon: 'person_search' },
   { name: 'about', to: '/about', label: 'shell.nav.about', icon: 'info' },
 ]
 

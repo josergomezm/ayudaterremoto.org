@@ -74,6 +74,7 @@ export const announcementSchema = z.object({
 // Report a missing person (verified users). Reading the list is public.
 export const missingPersonSchema = z.object({
   name: z.string().min(1),
+  dni: z.string().optional(),
   details: z.string().optional(),
   address: z.string().optional(),
   lastSeen: z.string().optional(),
@@ -90,4 +91,31 @@ export const missingPersonSchema = z.object({
 export const missingFoundSchema = z.object({
   byPhone: z.string().optional(),
   note: z.string().optional(),
+});
+
+export const locationRequestSchema = z.object({
+  buildingName: z.string().min(3),
+  address: z.string().optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  note: z.string().optional(),
+  contactPhone: z.string().optional(),
+});
+
+export const locationResolveSchema = z.object({
+  condition: z.enum(["safe", "damaged", "collapsed", "unknown"]),
+  note: z.string().min(5),
+});
+
+export const admittedPatientSchema = z.object({
+  name: z.string().min(2),
+  dni: z.string().optional(),
+  hospitalName: z.string().min(2),
+  notes: z.string().optional(),
+});
+
+export const hospitalInputSchema = z.object({
+  hospitalName: z.string().min(2),
+  textInput: z.string().optional(),
+  imageBase64: z.string().optional(),
 });

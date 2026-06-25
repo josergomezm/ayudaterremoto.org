@@ -242,6 +242,119 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
             await (0, audit_1.logAudit)(actor, "admin_remove", { type: "adminUser", id: email.toLowerCase() });
             return send(200, { removed: email.toLowerCase() });
         }
+        // ── Analyze image and create report (Command only) ───────────────────
+        if (m === "POST" && path === "/reports/analyze-image") {
+            const actor = await (0, auth_1.getActor)(req);
+            if (!actor || !(0, auth_1.hasRole)(actor, "command"))
+                return send(403, { error: "forbidden" });
+            const { imageUrl, imageBase64, context, lat, lng } = req.body;
+            if (!imageUrl && !imageBase64) {
+                return send(400, { error: "missing_image", message: "Debe proporcionar imageUrl o imageBase64." });
+            }
+            let base64Data = "";
+            let mimeType = "image/jpeg";
+            if (imageBase64) {
+                if (imageBase64.startsWith("data:")) {
+                    const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/);
+                    if (!match) {
+                        return send(400, { error: "invalid_base64", message: "Formato de URI de datos base64 inválido." });
+                    }
+                    mimeType = match[1];
+                    base64Data = match[2];
+                }
+                else {
+                    base64Data = imageBase64;
+                }
+            }
+            else if (imageUrl) {
+                try {
+                    const res = await fetch(imageUrl);
+                    if (!res.ok) {
+                        return send(400, {
+                            error: "failed_to_fetch_image",
+                            message: `No se pudo obtener la imagen del URL (status ${res.status}).`,
+                        });
+                    }
+                    mimeType = res.headers.get("content-type") || "image/jpeg";
+                    const arrayBuffer = await res.arrayBuffer();
+                    base64Data = Buffer.from(arrayBuffer).toString("base64");
+                }
+                catch (e) {
+                    return send(400, {
+                        error: "failed_to_fetch_image",
+                        message: "Error al descargar la imagen: " + (e instanceof Error ? e.message : String(e)),
+                    });
+                }
+            }
+            let apiKey = "";
+            try {
+                apiKey = GEMINI_API_KEY.value();
+            }
+            catch {
+                apiKey = "";
+            }
+            if (!apiKey) {
+                return send(500, { error: "missing_api_key", message: "API key de Gemini no configurada." });
+            }
+            const aiResult = await (0, ai_1.analyzeImage)({ base64Data, mimeType, context, apiKey });
+            if (!aiResult) {
+                return send(500, { error: "analysis_failed", message: "El análisis de la imagen por IA falló." });
+            }
+            let finalLat = lat;
+            let finalLng = lng;
+            let precise = true;
+            if (finalLat === undefined || finalLng === undefined) {
+                if (aiResult.locationSearchQuery) {
+                    const coords = await (0, ai_1.geocodeAddress)(aiResult.locationSearchQuery);
+                    if (coords) {
+                        finalLat = coords.lat;
+                        finalLng = coords.lng;
+                    }
+                }
+                if (finalLat === undefined || finalLng === undefined) {
+                    finalLat = 10.5;
+                    finalLng = -66.91;
+                    precise = false;
+                }
+            }
+            const id = (0, node_crypto_1.randomUUID)();
+            const incident = {
+                id,
+                category: aiResult.category,
+                triageLevel: aiResult.triageLevel,
+                status: statusForLevel(aiResult.triageLevel),
+                lat: finalLat,
+                lng: finalLng,
+                description: aiResult.description || "Reporte creado vía análisis de imagen por IA.",
+                locationPrecise: precise,
+                isProxy: true,
+                subjectName: aiResult.subjectName || undefined,
+                subjectDetails: aiResult.subjectDetails || undefined,
+                lastSeen: aiResult.lastSeen || undefined,
+                contact: aiResult.contact || undefined,
+                reporterId: actor.id,
+                reporterName: actor.name || "IA / " + actor.id,
+                evacuated: false,
+                resolved: false,
+                resolutionConfirmed: null,
+                createdAt: new Date().toISOString(),
+                clusterId: id,
+                aiFlagged: aiResult.confidence > 0.7,
+                aiSeverity: aiResult.triageLevel <= 2 ? "high" : "moderate",
+                aiReason: `Análisis de imagen: ${aiResult.category}. Confianza: ${Math.round(aiResult.confidence * 100)}%`,
+            };
+            // Suggest a Master Incident to merge into
+            incident.clusterId = await resolveClusterId(finalLat, finalLng, aiResult.category, precise, undefined, id);
+            await firebase_1.db.doc(`incidents/${id}`).set(incident);
+            await (0, audit_1.logAudit)(actor, "report_create", { type: "incident", id }, {
+                category: incident.category,
+                triageLevel: incident.triageLevel,
+                isProxy: incident.isProxy,
+                aiFlagged: incident.aiFlagged ?? false,
+                imageUrl: imageUrl || "upload",
+            });
+            return send(201, { incident: publicIncident(incident), analysis: aiResult });
+        }
         // ── Reports (any authenticated actor) ────────────────────────────────
         if (m === "POST" && path === "/reports") {
             const actor = await (0, auth_1.getActor)(req);
@@ -411,6 +524,62 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
             await (0, audit_1.logAudit)(actor, "missing_found", { type: "missingPerson", id: seg[1] }, { phone: byPhone });
             return send(200, { ok: true });
         }
+        // ── Location status requests (public read; verified report; responder resolve) ──
+        if (m === "GET" && path === "/location-requests") {
+            const viewer = await (0, auth_1.getActor)(req); // may be null (public)
+            const q = await firebase_1.db.collection("locationRequests").orderBy("createdAt", "desc").get();
+            const requests = q.docs.map((d) => {
+                const { reporterId, ...rest } = d.data();
+                return { ...rest, mine: !!viewer && viewer.id === reporterId };
+            });
+            return send(200, { requests });
+        }
+        if (m === "POST" && path === "/location-requests") {
+            const actor = await (0, auth_1.getActor)(req);
+            if (!actor)
+                return send(401, { error: "unauthenticated", message: "Verifíquese para solicitar información." });
+            const body = models_1.locationRequestSchema.parse(req.body);
+            const id = (0, node_crypto_1.randomUUID)();
+            const request = {
+                id,
+                ...body,
+                status: "pending",
+                reporterId: actor.id,
+                reporterName: actor.name || actor.id,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            await firebase_1.db.doc(`locationRequests/${id}`).set(request);
+            await (0, audit_1.logAudit)(actor, "location_request_create", { type: "locationRequest", id }, { buildingName: body.buildingName });
+            const { reporterId, ...pub } = request;
+            void reporterId;
+            return send(201, { request: pub });
+        }
+        if (m === "POST" && seg[0] === "location-requests" && seg.length === 3 && seg[2] === "resolve") {
+            const actor = await (0, auth_1.getActor)(req);
+            if (!actor)
+                return send(401, { error: "unauthenticated" });
+            if (!(0, auth_1.hasRole)(actor, "responder"))
+                return send(403, { error: "forbidden", message: "Solo brigadistas o coordinadores pueden responder." });
+            const ref = firebase_1.db.doc(`locationRequests/${seg[1]}`);
+            const requestSnap = await ref.get();
+            if (!requestSnap.exists)
+                return send(404, { error: "not_found" });
+            const { condition, note } = models_1.locationResolveSchema.parse(req.body);
+            const resolution = {
+                condition,
+                note,
+                answeredBy: { name: actor.name, role: actor.role },
+                at: new Date().toISOString(),
+            };
+            await ref.update({
+                status: "resolved",
+                resolution,
+                updatedAt: new Date().toISOString(),
+            });
+            await (0, audit_1.logAudit)(actor, "location_request_resolve", { type: "locationRequest", id: seg[1] }, { condition });
+            return send(200, { ok: true });
+        }
         // ── Announcements ────────────────────────────────────────────────────
         if (m === "GET" && path === "/announcements") {
             const q = await firebase_1.db.collection("announcements").orderBy("createdAt", "desc").get();
@@ -436,6 +605,97 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
             await (0, audit_1.logAudit)(actor, "announcement_delete", { type: "announcement", id: seg[1] });
             return send(200, { deleted: seg[1] });
         }
+        // ── Admitted Patients (GET public; POST analyze and save for responder+) ──
+        if (m === "GET" && path === "/patients") {
+            const q = await firebase_1.db.collection("admittedPatients").orderBy("createdAt", "desc").get();
+            const patients = q.docs.map((d) => d.data());
+            return send(200, { patients });
+        }
+        if (m === "POST" && path === "/patients/analyze-list") {
+            const actor = await (0, auth_1.getActor)(req);
+            if (!actor || !(0, auth_1.hasRole)(actor, "responder")) {
+                return send(403, { error: "forbidden", message: "Solo brigadistas o coordinadores pueden ingresar listas de pacientes." });
+            }
+            const input = models_1.hospitalInputSchema.parse(req.body);
+            let base64Data;
+            let mimeType;
+            if (input.imageBase64) {
+                const match = input.imageBase64.match(/^data:([^;]+);base64,(.+)$/);
+                if (match) {
+                    mimeType = match[1];
+                    base64Data = match[2];
+                }
+                else {
+                    base64Data = input.imageBase64;
+                    mimeType = "image/jpeg";
+                }
+            }
+            let apiKey = "";
+            try {
+                apiKey = GEMINI_API_KEY.value();
+            }
+            catch {
+                apiKey = "";
+            }
+            if (!apiKey) {
+                return send(500, { error: "missing_api_key", message: "API key de Gemini no configurada." });
+            }
+            const parsedPatients = await (0, ai_1.analyzePatientList)({
+                textInput: input.textInput,
+                base64Data,
+                mimeType,
+                apiKey,
+                hospitalName: input.hospitalName,
+            });
+            if (!parsedPatients) {
+                return send(500, { error: "analysis_failed", message: "El análisis de la lista por IA falló." });
+            }
+            // Fetch active missing persons to cross-reference
+            const missingPersonsSnap = await firebase_1.db.collection("missingPersons").where("status", "==", "missing").get();
+            const missingPersons = missingPersonsSnap.docs.map(doc => doc.data());
+            const savedPatients = [];
+            let matchedCount = 0;
+            for (const p of parsedPatients) {
+                const id = (0, node_crypto_1.randomUUID)();
+                let matchedMissingId = null;
+                // Try exact DNI/CI match first (digits only comparison)
+                if (p.dni) {
+                    const normDni = p.dni.replace(/\D/g, "");
+                    const match = missingPersons.find(m => m.dni && m.dni.replace(/\D/g, "") === normDni);
+                    if (match) {
+                        matchedMissingId = match.id;
+                        matchedCount++;
+                    }
+                }
+                // If no DNI match, try fuzzy name matching
+                if (!matchedMissingId) {
+                    const match = missingPersons.find(m => (0, ai_1.fuzzyNameMatch)(p.name, m.name));
+                    if (match) {
+                        matchedMissingId = match.id;
+                        matchedCount++;
+                    }
+                }
+                const patientDoc = {
+                    id,
+                    name: p.name,
+                    dni: p.dni || undefined,
+                    hospitalName: input.hospitalName,
+                    notes: p.notes || undefined,
+                    status: "admitted",
+                    matchedMissingId,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                };
+                await firebase_1.db.doc(`admittedPatients/${id}`).set(patientDoc);
+                savedPatients.push(patientDoc);
+                await (0, audit_1.logAudit)(actor, "patient_admit", { type: "admittedPatient", id }, {
+                    name: p.name,
+                    hospitalName: input.hospitalName,
+                    matchedMissingId: matchedMissingId || undefined,
+                });
+            }
+            return send(201, { patients: savedPatients, matchedCount });
+        }
         // ── Unknown route ────────────────────────────────────────────────────
         return send(404, {
             error: "route_not_found",
@@ -447,10 +707,12 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
                 "GET /admin/users", "POST /admin/users", "POST /admin/users/remove",
                 "GET|POST /access-request", "GET /admin/requests",
                 "POST /admin/requests/approve", "POST /admin/requests/deny",
-                "POST /reports", "GET /incidents",
+                "POST /reports", "POST /reports/analyze-image", "GET /incidents",
                 "POST /incidents/:id/status", "POST /incidents/:id/evacuate",
                 "POST /incidents/:id/resolve", "POST /incidents/:id/resolution",
                 "GET /missing", "POST /missing", "POST /missing/:id/found",
+                "GET /patients", "POST /patients/analyze-list",
+                "GET /location-requests", "POST /location-requests", "POST /location-requests/:id/resolve",
                 "GET /announcements", "POST /announcements", "DELETE /announcements/:id",
             ],
         });

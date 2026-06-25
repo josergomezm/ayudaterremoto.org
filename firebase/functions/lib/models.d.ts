@@ -72,29 +72,29 @@ export declare const reportSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     description: string;
     category: "medical" | "structural" | "obstruction" | "resource";
-    type: "personal" | "proxy";
     triageLevel: number;
     lat: number;
     lng: number;
-    unit?: string | undefined;
-    locationPrecise?: boolean | undefined;
+    type: "personal" | "proxy";
     subjectName?: string | undefined;
     subjectDetails?: string | undefined;
     lastSeen?: string | undefined;
     contact?: string | undefined;
+    unit?: string | undefined;
+    locationPrecise?: boolean | undefined;
 }, {
     description: string;
     category: "medical" | "structural" | "obstruction" | "resource";
-    type: "personal" | "proxy";
     triageLevel: number;
     lat: number;
     lng: number;
-    unit?: string | undefined;
-    locationPrecise?: boolean | undefined;
+    type: "personal" | "proxy";
     subjectName?: string | undefined;
     subjectDetails?: string | undefined;
     lastSeen?: string | undefined;
     contact?: string | undefined;
+    unit?: string | undefined;
+    locationPrecise?: boolean | undefined;
 }>;
 export declare const statusSchema: z.ZodObject<{
     status: z.ZodEnum<["green", "yellow", "red"]>;
@@ -122,6 +122,7 @@ export declare const announcementSchema: z.ZodObject<{
 }>;
 export declare const missingPersonSchema: z.ZodObject<{
     name: z.ZodString;
+    dni: z.ZodOptional<z.ZodString>;
     details: z.ZodOptional<z.ZodString>;
     address: z.ZodOptional<z.ZodString>;
     lastSeen: z.ZodOptional<z.ZodString>;
@@ -131,18 +132,20 @@ export declare const missingPersonSchema: z.ZodObject<{
     contactPhone: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     name: string;
+    lastSeen?: string | undefined;
     lat?: number | undefined;
     lng?: number | undefined;
-    lastSeen?: string | undefined;
+    dni?: string | undefined;
     details?: string | undefined;
     address?: string | undefined;
     phone?: string | undefined;
     contactPhone?: string | undefined;
 }, {
     name: string;
+    lastSeen?: string | undefined;
     lat?: number | undefined;
     lng?: number | undefined;
-    lastSeen?: string | undefined;
+    dni?: string | undefined;
     details?: string | undefined;
     address?: string | undefined;
     phone?: string | undefined;
@@ -157,4 +160,65 @@ export declare const missingFoundSchema: z.ZodObject<{
 }, {
     note?: string | undefined;
     byPhone?: string | undefined;
+}>;
+export declare const locationRequestSchema: z.ZodObject<{
+    buildingName: z.ZodString;
+    address: z.ZodOptional<z.ZodString>;
+    lat: z.ZodOptional<z.ZodNumber>;
+    lng: z.ZodOptional<z.ZodNumber>;
+    note: z.ZodOptional<z.ZodString>;
+    contactPhone: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    buildingName: string;
+    lat?: number | undefined;
+    lng?: number | undefined;
+    note?: string | undefined;
+    address?: string | undefined;
+    contactPhone?: string | undefined;
+}, {
+    buildingName: string;
+    lat?: number | undefined;
+    lng?: number | undefined;
+    note?: string | undefined;
+    address?: string | undefined;
+    contactPhone?: string | undefined;
+}>;
+export declare const locationResolveSchema: z.ZodObject<{
+    condition: z.ZodEnum<["safe", "damaged", "collapsed", "unknown"]>;
+    note: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    note: string;
+    condition: "safe" | "damaged" | "collapsed" | "unknown";
+}, {
+    note: string;
+    condition: "safe" | "damaged" | "collapsed" | "unknown";
+}>;
+export declare const admittedPatientSchema: z.ZodObject<{
+    name: z.ZodString;
+    dni: z.ZodOptional<z.ZodString>;
+    hospitalName: z.ZodString;
+    notes: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    hospitalName: string;
+    name: string;
+    dni?: string | undefined;
+    notes?: string | undefined;
+}, {
+    hospitalName: string;
+    name: string;
+    dni?: string | undefined;
+    notes?: string | undefined;
+}>;
+export declare const hospitalInputSchema: z.ZodObject<{
+    hospitalName: z.ZodString;
+    textInput: z.ZodOptional<z.ZodString>;
+    imageBase64: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    hospitalName: string;
+    textInput?: string | undefined;
+    imageBase64?: string | undefined;
+}, {
+    hospitalName: string;
+    textInput?: string | undefined;
+    imageBase64?: string | undefined;
 }>;

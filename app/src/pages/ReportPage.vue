@@ -8,6 +8,7 @@ import { useMissingStore } from '../stores/missing'
 import { TRIAGE_QUESTIONS, computeLevel } from '../lib/triage'
 import BaseButton from '../components/BaseButton.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
+import LocationPickerMap from '../components/LocationPickerMap.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -181,14 +182,23 @@ async function submit() {
           </label>
         </div>
 
-        <div class="space-y-2">
+        <div class="space-y-3">
           <h2 class="font-semibold text-slate-700">{{ showMissingQuestionnaire ? t('report.lastKnownLocation') : t('report.location') }}</h2>
           <BaseButton block variant="neutral" :disabled="locating" @click="useMyLocation">
             <span class="inline-flex items-center justify-center gap-1.5">
-              <MaterialIcon :name="lat !== null ? 'check_circle' : 'my_location'" :size="18" />
-              {{ locating ? t('report.locating') : (lat !== null ? t('report.pinSet') : t('report.dropPin')) }}
+              <MaterialIcon :name="locationPrecise && lat !== null ? 'check_circle' : 'my_location'" :size="18" />
+              {{ locating ? t('report.locating') : (lat !== null && locationPrecise ? t('report.pinSet') : t('report.dropPin')) }}
             </span>
           </BaseButton>
+
+          <LocationPickerMap
+            :lat="lat"
+            :lng="lng"
+            @update:location="({ lat: newLat, lng: newLng }) => { lat = newLat; lng = newLng; locationPrecise = true }"
+          />
+          <p class="text-xs text-slate-400 text-center">
+            {{ t('report.mapInstruction') }}
+          </p>
         </div>
 
         <div class="space-y-1.5">

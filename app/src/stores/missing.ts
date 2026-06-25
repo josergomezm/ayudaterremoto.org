@@ -6,6 +6,7 @@ export interface FoundBy { name?: string; phone?: string; note?: string; role: s
 export interface MissingPerson {
   id: string
   name: string
+  dni?: string
   details?: string
   address?: string
   lastSeen?: string
@@ -21,6 +22,7 @@ export interface MissingPerson {
 }
 export interface MissingPayload {
   name: string
+  dni?: string
   details?: string
   address?: string
   lastSeen?: string

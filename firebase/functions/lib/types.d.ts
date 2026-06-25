@@ -64,6 +64,7 @@ export interface Incident {
 export interface MissingPerson {
     id: string;
     name: string;
+    dni?: string;
     details?: string;
     address?: string;
     lastSeen?: string;
@@ -88,4 +89,38 @@ export interface Announcement {
     category: "urgent" | "logistics" | "correction";
     message: string;
     createdAt: string;
+}
+export interface LocationRequest {
+    id: string;
+    buildingName: string;
+    address?: string;
+    lat?: number;
+    lng?: number;
+    note?: string;
+    status: "pending" | "investigating" | "resolved";
+    resolution?: {
+        condition: "safe" | "damaged" | "collapsed" | "unknown";
+        note: string;
+        answeredBy: {
+            name: string;
+            role: string;
+        };
+        at: string;
+    };
+    contactPhone?: string;
+    reporterId: string;
+    reporterName: string;
+    createdAt: string;
+    updatedAt: string;
+}
+export interface AdmittedPatient {
+    id: string;
+    name: string;
+    dni?: string;
+    hospitalName: string;
+    notes?: string;
+    status: "admitted" | "discharged";
+    matchedMissingId?: string | null;
+    createdAt: string;
+    updatedAt: string;
 }
