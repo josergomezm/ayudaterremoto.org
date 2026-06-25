@@ -451,9 +451,15 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       if (m === "POST" && action === "status") {
         if (!hasRole(actor, "responder")) return send(403, { error: "forbidden" });
         const status = statusSchema.parse(req.body).status;
-        await ref.update({ status });
+        const updateData: Partial<Incident> = { status };
+        if (status === "red" || status === "yellow") {
+          updateData.evacuated = false;
+          updateData.resolved = false;
+          updateData.resolutionConfirmed = null;
+        }
+        await ref.update(updateData);
         await logAudit(actor, "incident_status", { type: "incident", id: seg[1] }, { status });
-        return send(200, { incident: publicIncident({ ...incident, status }) });
+        return send(200, { incident: publicIncident({ ...incident, ...updateData }) });
       }
       if (m === "POST" && action === "evacuate") {
         if (!actor) return send(401, { error: "unauthenticated" });

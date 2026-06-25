@@ -9,8 +9,9 @@ import TriageBadge from '../components/TriageBadge.vue'
 import BaseButton from '../components/BaseButton.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
 import IncidentMap from '../components/IncidentMap.vue'
+import { formatRelativeTime, formatAbsoluteTime } from '../lib/date'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const store = useIncidentsStore()
@@ -46,13 +47,19 @@ const statuses: TriageStatus[] = ['green', 'yellow', 'red']
         </span>
       </div>
 
-      <!-- HERO TARGET for the title text -->
       <h1
         class="text-2xl font-bold text-slate-900"
         :style="{ viewTransitionName: 'incident-title-' + incident.id }"
       >
         {{ t('category.' + incident.category) }}
       </h1>
+      
+      <div class="text-xs text-slate-500 font-medium -mt-1 flex items-center gap-1">
+        <span>{{ t('detail.reportedBy') }}:</span>
+        <span class="text-slate-700 font-semibold">{{ formatRelativeTime(incident.createdAt, locale) }}</span>
+        <span class="text-slate-300">•</span>
+        <span>{{ formatAbsoluteTime(incident.createdAt, locale) }}</span>
+      </div>
 
       <!-- Category Specific Attributes Display -->
       <div v-if="incident.structuralDamage || incident.resourceType || incident.medicalCount || incident.obstructionType" class="flex flex-wrap gap-2 text-xs font-semibold my-1">
@@ -87,8 +94,10 @@ const statuses: TriageStatus[] = ['green', 'yellow', 'red']
         </h2>
         <ul class="space-y-2">
           <li v-for="r in incident.reports" :key="r.id" class="rounded-xl bg-white p-2.5 text-sm ring-1 ring-slate-200">
-            <div class="flex items-center gap-2 text-xs text-slate-400">
-              <span>{{ new Date(r.createdAt).toLocaleString() }}</span>
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-400">
+              <span class="font-medium text-slate-500">{{ formatRelativeTime(r.createdAt, locale) }}</span>
+              <span class="text-slate-300">•</span>
+              <span>{{ formatAbsoluteTime(r.createdAt, locale) }}</span>
               <span v-if="r.isProxy" class="rounded-full bg-violet-100 px-1.5 font-semibold text-violet-700">{{ t('triage.proxy') }}</span>
               <span v-if="r.aiFlagged" class="rounded-full bg-fuchsia-100 px-1.5 font-semibold text-fuchsia-700">{{ t('triage.aiFlagged') }}</span>
             </div>
@@ -104,9 +113,12 @@ const statuses: TriageStatus[] = ['green', 'yellow', 'red']
       </div>
 
       <!-- Responder+ controls -->
-      <div v-if="canManage && !incident.evacuated" class="space-y-3 border-t border-slate-200 pt-4">
+      <div v-if="canManage && (!incident.evacuated || admin.isAdmin)" class="space-y-3 border-t border-slate-200 pt-4">
         <div>
-          <div class="mb-1 text-sm font-semibold text-slate-700">{{ t('detail.updateStatus') }}</div>
+          <div class="mb-1 text-sm font-semibold text-slate-700">
+            {{ t('detail.updateStatus') }}
+            <span v-if="incident.evacuated" class="text-xs font-bold text-slate-400 uppercase ml-2">({{ t('triage.evacuated') }})</span>
+          </div>
           <div class="flex gap-2">
             <BaseButton
               v-for="s in statuses"
@@ -119,7 +131,7 @@ const statuses: TriageStatus[] = ['green', 'yellow', 'red']
           </div>
         </div>
         <div class="flex flex-wrap gap-2">
-          <BaseButton variant="neutral" @click="store.evacuate(incident.id)">{{ t('detail.markEvacuated') }}</BaseButton>
+          <BaseButton v-if="!incident.evacuated" variant="neutral" @click="store.evacuate(incident.id)">{{ t('detail.markEvacuated') }}</BaseButton>
           <BaseButton v-if="!incident.resolved" variant="neutral" @click="store.resolve(incident.id)">
             {{ t('detail.markResolved') }}
           </BaseButton>

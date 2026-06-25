@@ -436,9 +436,15 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
                 if (!(0, auth_1.hasRole)(actor, "responder"))
                     return send(403, { error: "forbidden" });
                 const status = models_1.statusSchema.parse(req.body).status;
-                await ref.update({ status });
+                const updateData = { status };
+                if (status === "red" || status === "yellow") {
+                    updateData.evacuated = false;
+                    updateData.resolved = false;
+                    updateData.resolutionConfirmed = null;
+                }
+                await ref.update(updateData);
                 await (0, audit_1.logAudit)(actor, "incident_status", { type: "incident", id: seg[1] }, { status });
-                return send(200, { incident: publicIncident({ ...incident, status }) });
+                return send(200, { incident: publicIncident({ ...incident, ...updateData }) });
             }
             if (m === "POST" && action === "evacuate") {
                 if (!actor)

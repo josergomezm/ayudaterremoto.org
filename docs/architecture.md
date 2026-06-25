@@ -62,7 +62,7 @@ On report submission the `api` function runs two backend passes (spec §7):
   `clusterId` ("Master Incident"), so the map/list can show "+N nearby reports" instead of
   sending many responders to the same place.
 - **Panic misclassification** — `ai.ts` sends the report's free text to the **Gemini API**
-  (`gemini-2.0-flash`) and, if the text implies worse than the declared triage (gas, fire,
+  (`gemini-2.5-flash`) and, if the text implies worse than the declared triage (gas, fire,
   trapped, not breathing…), escalates the level/status and sets `aiFlagged` + `aiReason`. It
   **never downgrades** and **never blocks the report**: a missing key, error, or 5 s timeout just
   skips AI and the report proceeds.

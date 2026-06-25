@@ -10,8 +10,9 @@ import { useToast } from '../lib/toast'
 import BaseButton from '../components/BaseButton.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
 import Loader from '../components/Loader.vue'
+import { formatRelativeTime, formatAbsoluteTime } from '../lib/date'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const store = useMissingStore()
 const buildingsStore = useBuildingsStore()
 const patientsStore = usePatientsStore()
@@ -282,6 +283,9 @@ const canMarkFound = (p: { mine?: boolean }) => admin.isAdmin || session.can('re
                   {{ p.status === 'found' ? t('missing.statusFound') : t('missing.statusMissing') }}
                 </span>
               </div>
+              <p class="text-[11px] text-slate-400 mt-1">
+                {{ t('missing.registeredLabel') }}: {{ formatRelativeTime(p.createdAt, locale) }} ({{ formatAbsoluteTime(p.createdAt, locale) }})
+              </p>
               <p v-if="p.details" class="mt-1 text-sm text-slate-700">{{ p.details }}</p>
               <p v-if="p.dni" class="mt-0.5 text-sm text-slate-500"><strong>Cédula/DNI:</strong> {{ p.dni }}</p>
               <p v-if="p.address" class="mt-0.5 text-sm text-slate-500"><strong>{{ t('missing.addressLabel') }}:</strong> {{ p.address }}</p>
@@ -361,7 +365,7 @@ const canMarkFound = (p: { mine?: boolean }) => admin.isAdmin || session.can('re
               <p class="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full inline-block mt-1">{{ p.hospitalName }}</p>
               <p v-if="p.dni" class="text-sm text-slate-600 mt-1"><strong>{{ t('missing.patients.dniLabel') }}:</strong> {{ p.dni }}</p>
               <p v-if="p.notes" class="text-sm text-slate-600 mt-0.5"><strong>{{ t('missing.patients.notesLabel') }}:</strong> {{ p.notes }}</p>
-              <p class="text-[11px] text-slate-400 mt-1.5">{{ t('missing.patients.registeredLabel') }}: {{ new Date(p.createdAt).toLocaleDateString() }} - {{ new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</p>
+              <p class="text-[11px] text-slate-400 mt-1.5">{{ t('missing.patients.registeredLabel') }}: {{ formatRelativeTime(p.createdAt, locale) }} ({{ formatAbsoluteTime(p.createdAt, locale) }})</p>
             </div>
           </div>
 
@@ -517,7 +521,7 @@ const canMarkFound = (p: { mine?: boolean }) => admin.isAdmin || session.can('re
               </p>
               
               <p class="mt-2 text-xs text-slate-400">
-                {{ t('missing.requestedByLabel') }}: {{ r.reporterName }}
+                {{ t('missing.requestedByLabel') }}: {{ r.reporterName }} <span class="mx-1">•</span> {{ formatRelativeTime(r.createdAt, locale) }} ({{ formatAbsoluteTime(r.createdAt, locale) }})
               </p>
 
               <!-- Resolution / Reply Details -->
@@ -534,15 +538,17 @@ const canMarkFound = (p: { mine?: boolean }) => admin.isAdmin || session.can('re
                 <p class="text-sm font-semibold text-slate-800">
                   {{ r.resolution.note }}
                 </p>
-                <p class="mt-1 text-xs text-slate-400">
-                  Por: {{ r.resolution.answeredBy.name }} ({{ r.resolution.answeredBy.role }})
+                <p class="mt-1 text-xs text-slate-400 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span>Por: {{ r.resolution.answeredBy.name }} ({{ r.resolution.answeredBy.role }})</span>
+                  <span class="text-slate-300">•</span>
+                  <span>{{ t('missing.resolvedLabel') }}: {{ formatRelativeTime(r.resolution.at, locale) }} ({{ formatAbsoluteTime(r.resolution.at, locale) }})</span>
                 </p>
               </div>
             </div>
 
             <!-- Resolve / Reply Trigger -->
             <button
-              v-if="canResolveBuilding && r.status !== 'resolved'"
+              v-if="canResolveBuilding && (r.status !== 'resolved' || admin.isAdmin)"
               class="shrink-0 rounded-lg bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 cursor-pointer"
               @click="openResolveBuilding(r.id)"
             >

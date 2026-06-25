@@ -13,7 +13,7 @@ exports.geocodeAddress = geocodeAddress;
 exports.analyzePatientList = analyzePatientList;
 exports.fuzzyNameMatch = fuzzyNameMatch;
 const v2_1 = require("firebase-functions/v2");
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const TIMEOUT_MS = 5000;
 async function assessReport(opts) {
     const { description, category, declaredLevel, apiKey } = opts;
