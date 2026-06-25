@@ -38,6 +38,14 @@ const categories: Category[] = ['medical', 'structural', 'obstruction', 'resourc
 // Triage questions depend on the chosen category.
 const questions = computed(() => (category.value ? TRIAGE_QUESTIONS[category.value] : []))
 
+const showMissingQuestionnaire = computed(() => {
+  if (!isProxy.value) return false
+  if (category.value === 'medical' && (answers.value['trapped'] === true || answers.value['deceased'] === true)) return true
+  if (category.value === 'structural' && answers.value['trapped'] === true) return true
+  if (category.value === 'obstruction' && answers.value['trapping'] === true) return true
+  return false
+})
+
 function answer(id: string, val: boolean) {
   answers.value[id] = val
 }
@@ -65,13 +73,13 @@ async function submit() {
     locationPrecise: locationPrecise.value,
     unit: unit.value || undefined,
     description: description.value || '—',
-    subjectName: isProxy.value && subjectName.value ? subjectName.value : undefined,
-    subjectDetails: isProxy.value && subjectDetails.value ? subjectDetails.value : undefined,
-    lastSeen: isProxy.value && lastSeen.value ? lastSeen.value : undefined,
-    contact: isProxy.value && contact.value ? contact.value : undefined,
+    subjectName: showMissingQuestionnaire.value && subjectName.value ? subjectName.value : undefined,
+    subjectDetails: showMissingQuestionnaire.value && subjectDetails.value ? subjectDetails.value : undefined,
+    lastSeen: showMissingQuestionnaire.value && lastSeen.value ? lastSeen.value : undefined,
+    contact: showMissingQuestionnaire.value && contact.value ? contact.value : undefined,
   })
   // Optionally also add the person to the public missing-persons list.
-  if (isProxy.value && asMissing.value && subjectName.value) {
+  if (showMissingQuestionnaire.value && asMissing.value && subjectName.value) {
     await missing.report({
       name: subjectName.value,
       details: subjectDetails.value || undefined,
@@ -148,8 +156,8 @@ async function submit() {
 
       <!-- Step 3 — person details (proxy) + location + context -->
       <section v-else-if="step === 3" class="space-y-4">
-        <!-- Guided person fields when reporting for someone else -->
-        <div v-if="isProxy" class="space-y-3">
+        <!-- Guided person fields when reporting for someone else (only relevant if someone is trapped/injured or medical) -->
+        <div v-if="showMissingQuestionnaire" class="space-y-3">
           <h2 class="font-semibold text-slate-700">{{ t('report.personHeading') }}</h2>
           <div class="space-y-1.5">
             <label class="text-sm font-medium text-slate-800">{{ t('report.subjectName') }}</label>
@@ -174,7 +182,7 @@ async function submit() {
         </div>
 
         <div class="space-y-2">
-          <h2 class="font-semibold text-slate-700">{{ isProxy ? t('report.lastKnownLocation') : t('report.location') }}</h2>
+          <h2 class="font-semibold text-slate-700">{{ showMissingQuestionnaire ? t('report.lastKnownLocation') : t('report.location') }}</h2>
           <BaseButton block variant="neutral" :disabled="locating" @click="useMyLocation">
             <span class="inline-flex items-center justify-center gap-1.5">
               <MaterialIcon :name="lat !== null ? 'check_circle' : 'my_location'" :size="18" />

@@ -12,6 +12,8 @@ export interface TriageQuestion {
 
 export const TRIAGE_QUESTIONS: Record<Category, TriageQuestion[]> = {
   medical: [
+    { id: 'trapped', labelKey: 'report.q.medical.trapped', dangerAnswer: true, level: 1 },
+    { id: 'deceased', labelKey: 'report.q.medical.deceased', dangerAnswer: true, level: 2 },
     { id: 'conscious', labelKey: 'report.q.medical.conscious', dangerAnswer: false, level: 1 },
     { id: 'breathing', labelKey: 'report.q.medical.breathing', dangerAnswer: false, level: 1 },
     { id: 'bleeding', labelKey: 'report.q.medical.bleeding', dangerAnswer: true, level: 2 },

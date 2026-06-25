@@ -102,14 +102,14 @@ function isActive(to: string): boolean {
       <AnnouncementBanner />
       <OfflineBanner />
 
-      <main class="flex-1 overflow-y-auto">
+      <main class="flex-1 overflow-y-auto pb-20 md:pb-0">
         <slot />
       </main>
 
       <ToastHost />
 
       <!-- ── MOBILE BOTTOM NAV (below md) ───────────────────────────── -->
-      <nav class="pb-safe border-t border-slate-200 bg-white md:hidden">
+      <nav class="fixed bottom-0 left-0 right-0 z-50 pb-safe border-t border-slate-200 bg-white md:hidden">
         <div class="grid grid-cols-6">
           <RouterLink
             v-for="item in nav"

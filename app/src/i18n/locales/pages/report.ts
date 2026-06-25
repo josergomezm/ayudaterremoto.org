@@ -1,13 +1,15 @@
 const es = {
   title: 'Nuevo reporte',
   who: '¿Para quién es?',
-  self: 'Para mí / aquí',
+  self: 'Para mí',
   other: 'Para otra persona',
   missingPersonCta: 'Reportar una persona desaparecida',
   category: '¿Qué está pasando?',
   triageTitle: 'Triaje rápido',
   q: {
     medical: {
+      trapped: '¿La persona está atrapada?',
+      deceased: '¿La persona ha fallecido?',
       conscious: '¿La persona está consciente?',
       breathing: '¿La persona respira?',
       bleeding: '¿Hay sangrado abundante?',
@@ -58,13 +60,15 @@ const es = {
 const en: typeof es = {
   title: 'New report',
   who: 'Who is this for?',
-  self: 'Myself / here',
+  self: 'Myself',
   other: 'Someone else',
   missingPersonCta: 'Report a missing person',
   category: 'What is happening?',
   triageTitle: 'Quick triage',
   q: {
     medical: {
+      trapped: 'Is the person trapped?',
+      deceased: 'Is the person deceased?',
       conscious: 'Is the person conscious?',
       breathing: 'Is the person breathing?',
       bleeding: 'Is there severe bleeding?',
