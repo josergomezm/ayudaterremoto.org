@@ -35,6 +35,17 @@ onMounted(() => execute())
       </ol>
     </div>
 
+    <!-- Disclaimer -->
+    <div class="space-y-2 rounded-2xl bg-amber-50/50 p-4 shadow-sm ring-1 ring-amber-200">
+      <h2 class="flex items-center gap-1.5 font-semibold text-amber-900">
+        <MaterialIcon name="warning" :size="20" class="text-amber-700" />
+        {{ t('about.disclaimerTitle') }}
+      </h2>
+      <p class="text-xs text-amber-900/80 leading-relaxed">
+        {{ t('about.disclaimerBody') }}
+      </p>
+    </div>
+
     <!-- Language selector lives here (moved off the global nav) -->
     <div class="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
       <span class="flex items-center gap-2 font-medium text-slate-700">

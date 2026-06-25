@@ -14,6 +14,8 @@ const es = {
   ],
   openSource: 'Este proyecto es de código abierto.',
   viewOnGithub: 'Ver en GitHub',
+  disclaimerTitle: 'Descargo de responsabilidad',
+  disclaimerBody: 'Esta es una plataforma de código abierto desarrollada por voluntarios con el único propósito de apoyar a la comunidad durante una crisis. Su uso se realiza bajo su propia responsabilidad y no asumimos ninguna obligación legal, garantía de respuesta o responsabilidad por cualquier reporte u resultado. Esta aplicación no sustituye el contacto directo con las autoridades o servicios de emergencia oficiales (como el 911 o 171).',
 }
 
 const en: typeof es = {
@@ -32,6 +34,8 @@ const en: typeof es = {
   ],
   openSource: 'This project is open source.',
   viewOnGithub: 'View on GitHub',
+  disclaimerTitle: 'Disclaimer',
+  disclaimerBody: 'This is an open-source platform developed by volunteers for the sole purpose of assisting the community during a crisis. Use is entirely at your own risk; we assume no legal obligation, response guarantees, or liability for any reports or outcomes. This application is not a substitute for contacting official emergency services (such as 911 or 171).',
 }
 
 export default { es, en }
