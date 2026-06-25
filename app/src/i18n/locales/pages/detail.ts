@@ -1,0 +1,41 @@
+const es = {
+  title: 'Incidente',
+  reportedBy: 'Reportado',
+  updateStatus: 'Actualizar estado',
+  markEvacuated: 'Marcar evacuado',
+  markResolved: 'Marcar resuelto',
+  resolutionPrompt: 'El brigadista dice que está resuelto. ¿Se solucionó el problema?',
+  evacuatedBadge: 'Evacuado — fuera de la búsqueda activa',
+  resolvedPending: 'Resuelto — esperando confirmación del reportante',
+  resolvedConfirmed: 'Resolución confirmada',
+  resolvedRejected: 'El reportante dice que NO está resuelto',
+  notFound: 'Incidente no encontrado.',
+  aiNote: 'La IA marcó este reporte para revisión:',
+  lastSeenLabel: 'Visto por última vez',
+  contactLabel: 'Contacto',
+  reportsHeading: 'Posibles duplicados (revisar)',
+  reporterLabel: 'Reportó',
+  unitLabel: 'Piso / unidad',
+}
+
+const en: typeof es = {
+  title: 'Incident',
+  reportedBy: 'Reported',
+  updateStatus: 'Update status',
+  markEvacuated: 'Mark evacuated',
+  markResolved: 'Mark resolved',
+  resolutionPrompt: 'The responder says this is fixed. Did it resolve the problem?',
+  evacuatedBadge: 'Evacuated — removed from active search',
+  resolvedPending: 'Resolved — awaiting reporter confirmation',
+  resolvedConfirmed: 'Resolution confirmed',
+  resolvedRejected: 'Reporter says it is NOT resolved',
+  notFound: 'Incident not found.',
+  aiNote: 'AI flagged this report for review:',
+  lastSeenLabel: 'Last seen',
+  contactLabel: 'Contact',
+  reportsHeading: 'Possible duplicates (review)',
+  reporterLabel: 'Reported by',
+  unitLabel: 'Floor / unit',
+}
+
+export default { es, en }

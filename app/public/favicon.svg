@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ayuda Terremoto">
+  <!-- App mark: a seismograph pulse on a dark badge; the central spike is amber
+       to read as an alert. Works down to favicon size. -->
+  <rect width="512" height="512" rx="112" fill="#0F172A"/>
+  <!-- Seismic baseline + waveform (white) -->
+  <path d="M64 256 H150 L188 256 L214 196 L238 332 L256 120 L274 372 L300 212 L326 256 H448"
+        stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Central spike highlighted in amber (alert accent) -->
+  <path d="M238 332 L256 120 L274 372"
+        stroke="#F59E0B" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Epicenter marker -->
+  <circle cx="256" cy="256" r="13" fill="#F59E0B"/>
+</svg>

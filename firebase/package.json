@@ -1,0 +1,12 @@
+{
+  "name": "ayudaterremoto-firebase",
+  "private": true,
+  "scripts": {
+    "emulators": "npm --prefix functions run build && concurrently -k -n tsc,emu -c blue,green \"npm --prefix functions run build:watch\" \"firebase emulators:start --only functions,firestore,auth --project demo-app\"",
+    "emulators:all": "npm --prefix functions run build && firebase emulators:start --project demo-app",
+    "emulators:watch": "firebase emulators:start --only functions,firestore,auth --project demo-app"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

@@ -1,0 +1,81 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.missingFoundSchema = exports.missingPersonSchema = exports.announcementSchema = exports.resolutionConfirmSchema = exports.statusSchema = exports.reportSchema = exports.accessRequestSchema = exports.adminEmailSchema = exports.adminUserSchema = exports.verifyConfirmSchema = exports.verifyLookupSchema = exports.echoSchema = void 0;
+const zod_1 = require("zod");
+// One zod schema per endpoint body. Add new endpoints' schemas here, then a
+// matching route branch in api.ts (see README "How to add an API endpoint").
+exports.echoSchema = zod_1.z.object({
+    message: zod_1.z.string().min(1),
+    name: zod_1.z.string().optional(),
+});
+const nacSchema = zod_1.z.enum(["V", "E"]);
+const dniSchema = zod_1.z.string().regex(/^\d{6,9}$/, "Cédula must be 6–9 digits");
+// Verification — step 1: look up a Cédula and get the name-match grid.
+exports.verifyLookupSchema = zod_1.z.object({
+    nac: nacSchema,
+    dni: dniSchema,
+});
+// Verification — step 2: pick the right name, optionally redeem a vouch code.
+exports.verifyConfirmSchema = zod_1.z.object({
+    challengeId: zod_1.z.string().min(1),
+    selectedName: zod_1.z.string().min(1),
+    vouchCode: zod_1.z.string().optional(),
+});
+// Vouch codes always grant the Responder role, so generation needs no body.
+// Admin-role management (Command only):
+exports.adminUserSchema = zod_1.z.object({
+    email: zod_1.z.string().email(),
+    role: zod_1.z.enum(["authority", "command"]),
+});
+exports.adminEmailSchema = zod_1.z.object({
+    email: zod_1.z.string().email(),
+});
+// A signed-in Google user requests vouching access.
+exports.accessRequestSchema = zod_1.z.object({
+    note: zod_1.z.string().max(500).optional(),
+});
+const categorySchema = zod_1.z.enum(["medical", "structural", "obstruction", "resource"]);
+// Submit a report (personal or proxy).
+exports.reportSchema = zod_1.z.object({
+    type: zod_1.z.enum(["personal", "proxy"]),
+    category: categorySchema,
+    triageLevel: zod_1.z.number().int().min(1).max(5),
+    lat: zod_1.z.number(),
+    lng: zod_1.z.number(),
+    description: zod_1.z.string().min(1),
+    unit: zod_1.z.string().optional(), // floor / apartment — keeps vertical incidents distinct
+    locationPrecise: zod_1.z.boolean().optional(), // false when GPS failed and a fallback pin was used
+    subjectName: zod_1.z.string().optional(), // proxy: person name
+    subjectDetails: zod_1.z.string().optional(), // proxy: age / appearance
+    lastSeen: zod_1.z.string().optional(), // proxy: when/where last seen
+    contact: zod_1.z.string().optional(), // proxy: reporter relationship / phone
+});
+exports.statusSchema = zod_1.z.object({
+    status: zod_1.z.enum(["green", "yellow", "red"]),
+});
+exports.resolutionConfirmSchema = zod_1.z.object({
+    confirmed: zod_1.z.boolean(),
+});
+exports.announcementSchema = zod_1.z.object({
+    category: zod_1.z.enum(["urgent", "logistics", "correction"]),
+    message: zod_1.z.string().min(1),
+});
+// Report a missing person (verified users). Reading the list is public.
+exports.missingPersonSchema = zod_1.z.object({
+    name: zod_1.z.string().min(1),
+    details: zod_1.z.string().optional(),
+    address: zod_1.z.string().optional(),
+    lastSeen: zod_1.z.string().optional(),
+    lat: zod_1.z.number().optional(),
+    lng: zod_1.z.number().optional(),
+    phone: zod_1.z.string().optional(),
+    // contactName is NOT accepted from the client — it's set server-side from the
+    // reporter's verified identity.
+    contactPhone: zod_1.z.string().optional(),
+});
+// Marking a person found. The finder's NAME comes from their verified identity;
+// we only ask for an optional callback phone + how they know.
+exports.missingFoundSchema = zod_1.z.object({
+    byPhone: zod_1.z.string().optional(),
+    note: zod_1.z.string().optional(),
+});

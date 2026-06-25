@@ -1,0 +1,70 @@
+/* ════════════════════════════════════════════════════════════
+   VIEW TRANSITION RECIPES
+   Rules of the house:
+   - Animate ONLY transform and opacity (compositor-friendly).
+   - Durations 200–350ms. Easing: cubic-bezier(0.4, 0, 0.2, 1).
+   - Every recipe must look acceptable if it simply cross-fades
+     (that's the automatic fallback).
+   - view-transition-name must be UNIQUE per page at any moment —
+     derive hero names from the item id, never a static name in v-for.
+   ════════════════════════════════════════════════════════════ */
+
+/* Recipe 1 — default page cross-fade (applies to everything) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Recipe 2 — hero elements: the morph is automatic; we only tune timing.
+   Matches any element carrying a view-transition-name (incident-*, incident-title-*)
+   via the universal group selector. */
+::view-transition-group(*) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Recipe 3 — reduced motion: kill everything. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* Recipe 4 — within-page list animation (Vue <TransitionGroup name="list">).
+   Used by the incident grid "Reorder" demo on the map page. */
+.list-move { transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1); }
+.list-enter-active,
+.list-leave-active { transition: opacity 250ms ease, transform 250ms ease; }
+.list-enter-from,
+.list-leave-to { opacity: 0; transform: translateY(8px); }
+.list-leave-active { position: absolute; }
+
+@media (prefers-reduced-motion: reduce) {
+  .list-move,
+  .list-enter-active,
+  .list-leave-active { transition: none; }
+}
+
+/* Recipe 5 — toasts (Vue <TransitionGroup name="toast">). */
+.toast-enter-active,
+.toast-leave-active { transition: opacity 200ms ease, transform 200ms ease; }
+.toast-enter-from,
+.toast-leave-to { opacity: 0; transform: translateY(12px); }
+.toast-move { transition: transform 200ms ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter-active,
+  .toast-leave-active,
+  .toast-move { transition: none; }
+}
+
+/* Optional per-page example (see docs/animations.md, recipe 2): slide the
+   About page in. Enabled by `view-transition-name: about-page` on its root. */
+::view-transition-old(about-page) { animation: 220ms cubic-bezier(0.4, 0, 0.2, 1) both vt-fade-out; }
+::view-transition-new(about-page) { animation: 220ms cubic-bezier(0.4, 0, 0.2, 1) both vt-slide-in; }
+
+@keyframes vt-slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes vt-fade-out { to { opacity: 0; } }
