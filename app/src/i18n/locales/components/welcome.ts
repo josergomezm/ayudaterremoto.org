@@ -3,12 +3,12 @@
 
 const es = {
   slide1: {
-    label: 'Paso 1 de 3',
+    label: 'Paso 1 de 4',
     heading: 'Aquí coordinamos la ayuda',
     body: 'Ayuda Terremoto conecta a personas afectadas con voluntarios y brigadas. Puedes reportar emergencias, buscar personas desaparecidas y ver qué está pasando en tu zona, incluso sin conexión.',
   },
   slide2: {
-    label: 'Paso 2 de 3',
+    label: 'Paso 2 de 4',
     heading: '¿Qué puedes hacer?',
     tabs: {
       map: { title: 'Mapa', desc: 'Ve todos los incidentes activos en tu área ordenados por gravedad.' },
@@ -18,8 +18,16 @@ const es = {
       people: { title: 'Consultas', desc: 'Busca desaparecidos, ingresados a hospitales o solicita revisión de edificios.' },
     },
   },
+  slide3_hubs: {
+    label: 'Paso 3 de 4',
+    heading: 'Centros de Acopio y Alivio',
+    body: 'Hemos habilitado un mapa y listado de centros de acopio donde se distribuye agua, comida, herramientas y refugio. Cualquiera puede ver la disponibilidad y urgencia en tiempo real para donar o solicitar ayuda.',
+    coordTitle: 'Ayuda con la coordinación',
+    coordBody: '¿Quieres coordinar o gestionar el inventario de un centro? Solicita acceso para unirte a nuestros grupos de trabajo de WhatsApp.',
+    coordCta: 'Contactar Coordinación en WhatsApp',
+  },
   slide3: {
-    label: 'Paso 3 de 3',
+    label: 'Paso 4 de 4',
     heading: 'Niveles de acceso',
     intro: 'Cuanto más verificado estés, más puedes ayudar. La verificación protege la integridad de los reportes.',
     roles: {
@@ -55,12 +63,12 @@ const es = {
 
 const en: typeof es = {
   slide1: {
-    label: 'Step 1 of 3',
+    label: 'Step 1 of 4',
     heading: 'This is where we coordinate aid',
     body: 'Ayuda Terremoto connects affected people with volunteers and response teams. You can report emergencies, search for missing people, and see what\'s happening in your area — even offline.',
   },
   slide2: {
-    label: 'Step 2 of 3',
+    label: 'Step 2 of 4',
     heading: 'What can you do?',
     tabs: {
       map: { title: 'Map', desc: 'See all active incidents in your area, sorted by severity.' },
@@ -70,8 +78,16 @@ const en: typeof es = {
       people: { title: 'Search', desc: 'Look up missing persons, hospital admissions, or request a building check.' },
     },
   },
+  slide3_hubs: {
+    label: 'Step 3 of 4',
+    heading: 'Resource Hubs & Relief',
+    body: 'We have enabled a map layer and directory of resource hubs distributing water, food, tools, and shelter. Anyone can see real-time availability and urgency to donate or request aid.',
+    coordTitle: 'Help with coordination',
+    coordBody: 'Do you want to coordinate or manage a hub\'s inventory? Request access to join our WhatsApp working groups.',
+    coordCta: 'Contact Coordination on WhatsApp',
+  },
   slide3: {
-    label: 'Step 3 of 3',
+    label: 'Step 4 of 4',
     heading: 'Access levels',
     intro: 'The more verified you are, the more you can do. Verification protects the integrity of all reports.',
     roles: {

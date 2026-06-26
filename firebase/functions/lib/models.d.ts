@@ -11,12 +11,12 @@ export declare const echoSchema: z.ZodObject<{
 }>;
 export declare const adminUserSchema: z.ZodObject<{
     email: z.ZodString;
-    role: z.ZodEnum<["authority", "command"]>;
+    role: z.ZodEnum<["authority", "command", "sudo"]>;
 }, "strip", z.ZodTypeAny, {
-    role: "authority" | "command";
+    role: "authority" | "command" | "sudo";
     email: string;
 }, {
-    role: "authority" | "command";
+    role: "authority" | "command" | "sudo";
     email: string;
 }>;
 export declare const adminEmailSchema: z.ZodObject<{
@@ -27,10 +27,13 @@ export declare const adminEmailSchema: z.ZodObject<{
     email: string;
 }>;
 export declare const accessRequestSchema: z.ZodObject<{
+    phone: z.ZodString;
     note: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
+    phone: string;
     note?: string | undefined;
 }, {
+    phone: string;
     note?: string | undefined;
 }>;
 export declare const reportSchema: z.ZodObject<{
@@ -124,20 +127,20 @@ export declare const missingPersonSchema: z.ZodObject<{
     lastSeen?: string | undefined;
     lat?: number | undefined;
     lng?: number | undefined;
+    phone?: string | undefined;
     dni?: string | undefined;
     details?: string | undefined;
     address?: string | undefined;
-    phone?: string | undefined;
     contactPhone?: string | undefined;
 }, {
     name: string;
     lastSeen?: string | undefined;
     lat?: number | undefined;
     lng?: number | undefined;
+    phone?: string | undefined;
     dni?: string | undefined;
     details?: string | undefined;
     address?: string | undefined;
-    phone?: string | undefined;
     contactPhone?: string | undefined;
 }>;
 export declare const missingFoundSchema: z.ZodObject<{
@@ -210,4 +213,90 @@ export declare const hospitalInputSchema: z.ZodObject<{
     hospitalName: string;
     textInput?: string | undefined;
     imageBase64?: string | undefined;
+}>;
+export declare const hubCreateSchema: z.ZodObject<{
+    name: z.ZodString;
+    address: z.ZodString;
+    lat: z.ZodNumber;
+    lng: z.ZodNumber;
+    contactPhone: z.ZodString;
+    contactName: z.ZodString;
+    whatsappGroup: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    lat: number;
+    lng: number;
+    name: string;
+    address: string;
+    contactPhone: string;
+    contactName: string;
+    whatsappGroup?: string | undefined;
+}, {
+    lat: number;
+    lng: number;
+    name: string;
+    address: string;
+    contactPhone: string;
+    contactName: string;
+    whatsappGroup?: string | undefined;
+}>;
+export declare const hubUpdateSchema: z.ZodObject<{
+    name: z.ZodOptional<z.ZodString>;
+    address: z.ZodOptional<z.ZodString>;
+    contactPhone: z.ZodOptional<z.ZodString>;
+    contactName: z.ZodOptional<z.ZodString>;
+    whatsappGroup: z.ZodOptional<z.ZodString>;
+    status: z.ZodOptional<z.ZodEnum<["active", "closed"]>>;
+}, "strip", z.ZodTypeAny, {
+    name?: string | undefined;
+    status?: "active" | "closed" | undefined;
+    address?: string | undefined;
+    contactPhone?: string | undefined;
+    contactName?: string | undefined;
+    whatsappGroup?: string | undefined;
+}, {
+    name?: string | undefined;
+    status?: "active" | "closed" | undefined;
+    address?: string | undefined;
+    contactPhone?: string | undefined;
+    contactName?: string | undefined;
+    whatsappGroup?: string | undefined;
+}>;
+export declare const inventoryUpsertSchema: z.ZodObject<{
+    category: z.ZodEnum<["water", "food", "tools", "medical", "shelter", "clothing", "hygiene", "other"]>;
+    name: z.ZodString;
+    quantity: z.ZodNumber;
+    unit: z.ZodString;
+    urgency: z.ZodOptional<z.ZodEnum<["available", "low", "depleted"]>>;
+}, "strip", z.ZodTypeAny, {
+    category: "medical" | "water" | "food" | "shelter" | "tools" | "other" | "clothing" | "hygiene";
+    name: string;
+    unit: string;
+    quantity: number;
+    urgency?: "low" | "available" | "depleted" | undefined;
+}, {
+    category: "medical" | "water" | "food" | "shelter" | "tools" | "other" | "clothing" | "hygiene";
+    name: string;
+    unit: string;
+    quantity: number;
+    urgency?: "low" | "available" | "depleted" | undefined;
+}>;
+export declare const inventoryAdjustSchema: z.ZodObject<{
+    delta: z.ZodNumber;
+    action: z.ZodEnum<["restock", "distribute", "adjust"]>;
+    note: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    delta: number;
+    action: "restock" | "distribute" | "adjust";
+    note?: string | undefined;
+}, {
+    delta: number;
+    action: "restock" | "distribute" | "adjust";
+    note?: string | undefined;
+}>;
+export declare const hubCoordinatorSchema: z.ZodObject<{
+    email: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    email: string;
+}, {
+    email: string;
 }>;

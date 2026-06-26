@@ -14,6 +14,10 @@ const router = createRouter({
     { path: '/guides/:id', name: 'guide-detail', component: () => import('../pages/GuideDetailPage.vue') },
     { path: '/about', name: 'about', component: () => import('../pages/AboutPage.vue') },
     { path: '/admin', name: 'admin', component: () => import('../pages/AdminPage.vue') },
+    { path: '/hubs', name: 'hubs', component: () => import('../pages/HubsPage.vue') },
+    { path: '/hubs/create', name: 'hub-create', component: () => import('../pages/HubCreatePage.vue') },
+    { path: '/hubs/:id', name: 'hub-detail', component: () => import('../pages/HubDetailPage.vue') },
+    { path: '/hubs/:id/manage', name: 'hub-manage', component: () => import('../pages/HubManagePage.vue') },
     // Catch-all 404. Required because Firebase Hosting rewrites every URL to
     // index.html — without this, typos render an empty RouterView.
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../pages/NotFoundPage.vue') },

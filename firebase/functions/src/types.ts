@@ -1,13 +1,13 @@
 // Domain types shared across the API. Data now lives in Firestore (see firebase.ts
 // + seed.ts); these describe the document shapes.
 
-export type Role = "civilian" | "responder" | "authority" | "command";
-export type AdminRole = "authority" | "command";
+export type Role = "civilian" | "responder" | "authority" | "command" | "sudo";
+export type AdminRole = "authority" | "command" | "sudo";
 export type TriageStatus = "green" | "yellow" | "red";
 export type ReportCategory = "medical" | "structural" | "obstruction" | "resource";
 
 export const ROLE_RANK: Record<Role, number> = {
-  civilian: 0, responder: 1, authority: 2, command: 3,
+  civilian: 0, responder: 1, authority: 2, command: 3, sudo: 4,
 };
 
 export interface VouchCode {
@@ -31,6 +31,15 @@ export interface AdminUser {
 export interface AccessRequest {
   email: string;
   name: string;
+  phone: string;
+  note?: string;
+  requestedAt: string;
+}
+
+export interface ResponderRequest {
+  email: string;
+  name: string;
+  phone: string;
   note?: string;
   requestedAt: string;
 }
@@ -125,4 +134,53 @@ export interface AdmittedPatient {
   matchedMissingId?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type HubStatus = "active" | "closed";
+export type InventoryCategory = "water" | "food" | "tools" | "medical" | "shelter" | "clothing" | "hygiene" | "other";
+export type InventoryUrgency = "available" | "low" | "depleted";
+export type HubLogAction = "restock" | "distribute" | "adjust" | "note";
+
+export interface ResourceHub {
+  id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  contactPhone: string;
+  contactName: string;
+  whatsappGroup?: string;
+  status: HubStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  category: InventoryCategory;
+  name: string;
+  quantity: number;
+  unit: string;
+  urgency: InventoryUrgency;
+  updatedAt: string;
+}
+
+export interface HubLog {
+  id: string;
+  action: HubLogAction;
+  itemName: string;
+  quantityDelta: number;
+  unit: string;
+  note?: string;
+  actorEmail: string;
+  actorName: string;
+  timestamp: string;
+}
+
+export interface HubCoordinator {
+  email: string;
+  name: string;
+  addedBy: string;
+  addedAt: string;
 }

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hospitalInputSchema = exports.admittedPatientSchema = exports.locationResolveSchema = exports.locationRequestSchema = exports.missingFoundSchema = exports.missingPersonSchema = exports.announcementSchema = exports.resolutionConfirmSchema = exports.statusSchema = exports.reportSchema = exports.accessRequestSchema = exports.adminEmailSchema = exports.adminUserSchema = exports.echoSchema = void 0;
+exports.hubCoordinatorSchema = exports.inventoryAdjustSchema = exports.inventoryUpsertSchema = exports.hubUpdateSchema = exports.hubCreateSchema = exports.hospitalInputSchema = exports.admittedPatientSchema = exports.locationResolveSchema = exports.locationRequestSchema = exports.missingFoundSchema = exports.missingPersonSchema = exports.announcementSchema = exports.resolutionConfirmSchema = exports.statusSchema = exports.reportSchema = exports.accessRequestSchema = exports.adminEmailSchema = exports.adminUserSchema = exports.echoSchema = void 0;
 const zod_1 = require("zod");
 // One zod schema per endpoint body. Add new endpoints' schemas here, then a
 // matching route branch in api.ts (see README "How to add an API endpoint").
@@ -12,13 +12,14 @@ exports.echoSchema = zod_1.z.object({
 // Admin-role management (Command only):
 exports.adminUserSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
-    role: zod_1.z.enum(["authority", "command"]),
+    role: zod_1.z.enum(["authority", "command", "sudo"]),
 });
 exports.adminEmailSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
 });
-// A signed-in Google user requests vouching access.
+// A signed-in Google user requests access (coordinator or responder).
 exports.accessRequestSchema = zod_1.z.object({
+    phone: zod_1.z.string().min(5),
     note: zod_1.z.string().max(500).optional(),
 });
 const categorySchema = zod_1.z.enum(["medical", "structural", "obstruction", "resource"]);
@@ -93,4 +94,36 @@ exports.hospitalInputSchema = zod_1.z.object({
     hospitalName: zod_1.z.string().min(2),
     textInput: zod_1.z.string().optional(),
     imageBase64: zod_1.z.string().optional(),
+});
+exports.hubCreateSchema = zod_1.z.object({
+    name: zod_1.z.string().min(3),
+    address: zod_1.z.string().min(3),
+    lat: zod_1.z.number().min(-90).max(90),
+    lng: zod_1.z.number().min(-180).max(180),
+    contactPhone: zod_1.z.string().min(5),
+    contactName: zod_1.z.string().min(2),
+    whatsappGroup: zod_1.z.string().optional(),
+});
+exports.hubUpdateSchema = zod_1.z.object({
+    name: zod_1.z.string().min(3).optional(),
+    address: zod_1.z.string().min(3).optional(),
+    contactPhone: zod_1.z.string().min(5).optional(),
+    contactName: zod_1.z.string().min(2).optional(),
+    whatsappGroup: zod_1.z.string().optional(),
+    status: zod_1.z.enum(["active", "closed"]).optional(),
+});
+exports.inventoryUpsertSchema = zod_1.z.object({
+    category: zod_1.z.enum(["water", "food", "tools", "medical", "shelter", "clothing", "hygiene", "other"]),
+    name: zod_1.z.string().min(1),
+    quantity: zod_1.z.number().min(0),
+    unit: zod_1.z.string().min(1),
+    urgency: zod_1.z.enum(["available", "low", "depleted"]).optional(),
+});
+exports.inventoryAdjustSchema = zod_1.z.object({
+    delta: zod_1.z.number(),
+    action: zod_1.z.enum(["restock", "distribute", "adjust"]),
+    note: zod_1.z.string().optional(),
+});
+exports.hubCoordinatorSchema = zod_1.z.object({
+    email: zod_1.z.string().email(),
 });

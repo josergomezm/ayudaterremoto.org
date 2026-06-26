@@ -6,8 +6,10 @@ import { adminFetch } from '../lib/adminApi'
 import type { Role } from './session'
 
 export interface AuditEntry { voucher: string; voucheeDni: string; timestamp: string }
-export interface AdminUser { email: string; role: 'authority' | 'command' }
-export interface AccessRequest { email: string; name: string; note?: string; requestedAt: string }
+export interface AdminUser { email: string; role: 'authority' | 'command' | 'sudo' }
+export interface AccessRequest { email: string; name: string; phone: string; note?: string; requestedAt: string }
+export interface ResponderRequest { email: string; name: string; phone: string; note?: string; requestedAt: string }
+export interface Responder { email: string; name?: string; role: string; updatedAt?: string }
 export interface AuditLogEntry {
   action: string
   actorId: string
@@ -28,8 +30,9 @@ export const useAdminStore = defineStore('admin', () => {
   const role = ref<Role | null>(null)
   const ready = ref(false)
 
-  const isAdmin = computed(() => role.value === 'authority' || role.value === 'command')
-  const isCommand = computed(() => role.value === 'command')
+  const isAdmin = computed(() => role.value === 'authority' || role.value === 'command' || role.value === 'sudo')
+  const isCommand = computed(() => role.value === 'command' || role.value === 'sudo')
+  const isSudo = computed(() => role.value === 'sudo')
 
   onAuthStateChanged(auth, async (u) => {
     user.value = u
@@ -65,8 +68,8 @@ export const useAdminStore = defineStore('admin', () => {
   const deleteAnnouncement = (id: string) => adminFetch(`/announcements/${id}`, { method: 'DELETE' })
 
   // Self-service access request (signed-in non-admins)
-  const requestAccess = (note: string) =>
-    adminFetch('/access-request', { method: 'POST', body: JSON.stringify({ note }) })
+  const requestAccess = (phone: string, note: string) =>
+    adminFetch('/access-request', { method: 'POST', body: JSON.stringify({ phone, note }) })
   const myRequest = () => adminFetch<{ status: string | null }>('/access-request')
   // Command: review requests
   const listRequests = () => adminFetch<{ requests: AccessRequest[] }>('/admin/requests')
@@ -75,10 +78,23 @@ export const useAdminStore = defineStore('admin', () => {
   const denyRequest = (email: string) =>
     adminFetch('/admin/requests/deny', { method: 'POST', body: JSON.stringify({ email }) })
 
+  // Responder/Brigadist Requests (Authority+)
+  const listResponderRequests = () => adminFetch<{ requests: ResponderRequest[] }>('/admin/responder-requests')
+  const approveResponderRequest = (email: string) =>
+    adminFetch('/admin/responder-requests/approve', { method: 'POST', body: JSON.stringify({ email }) })
+  const denyResponderRequest = (email: string) =>
+    adminFetch('/admin/responder-requests/deny', { method: 'POST', body: JSON.stringify({ email }) })
+  
+  // Responders Roster (Authority+)
+  const listResponders = () => adminFetch<{ responders: Responder[] }>('/admin/responders')
+  const removeResponder = (email: string) =>
+    adminFetch('/admin/responders/remove', { method: 'POST', body: JSON.stringify({ email }) })
+
   return {
-    user, role, ready, isAdmin, isCommand,
+    user, role, ready, isAdmin, isCommand, isSudo,
     signIn, signOut, generateCode, fetchAudit, fetchActivity, listAdmins, setAdmin, removeAdmin, broadcast,
     listAnnouncements, deleteAnnouncement,
     requestAccess, myRequest, listRequests, approveRequest, denyRequest,
+    listResponderRequests, approveResponderRequest, denyResponderRequest, listResponders, removeResponder,
   }
 })

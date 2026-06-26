@@ -4,8 +4,8 @@ import { apiFetch } from '../lib/api'
 import { auth, googleProvider } from '../lib/firebase'
 import { signInWithPopup, signOut as fbSignOut, onAuthStateChanged, type User } from 'firebase/auth'
 
-export type Role = 'civilian' | 'responder' | 'authority' | 'command'
-const RANK: Record<Role, number> = { civilian: 0, responder: 1, authority: 2, command: 3 }
+export type Role = 'civilian' | 'responder' | 'authority' | 'command' | 'sudo'
+const RANK: Record<Role, number> = { civilian: 0, responder: 1, authority: 2, command: 3, sudo: 4 }
 
 export const useSessionStore = defineStore('session', () => {
   const user = ref<User | null>(null)
@@ -90,5 +90,34 @@ export const useSessionStore = defineStore('session', () => {
     return { ok: false, error: res.error }
   }
 
-  return { user, role, name, email, ready, isVerified, can, signIn, signOut, redeemVouch }
+  async function requestResponder(phone: string, note: string): Promise<{ ok: boolean; error?: string }> {
+    const fbUser = auth.currentUser
+    if (!fbUser) return { ok: false, error: 'Inicie sesión primero' }
+    const token = await fbUser.getIdToken()
+    const res = await apiFetch<{ status: string }>('/verify/responder-request', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ phone, note }),
+    })
+    if (res.ok) return { ok: true }
+    return { ok: false, error: res.error }
+  }
+
+  async function checkResponderRequest(): Promise<{ ok: boolean; status: string | null; error?: string }> {
+    const fbUser = auth.currentUser
+    if (!fbUser) return { ok: false, status: null, error: 'Inicie sesión primero' }
+    const token = await fbUser.getIdToken()
+    const res = await apiFetch<{ status: string | null }>('/verify/responder-request', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+    })
+    if (res.ok) return { ok: true, status: res.data.status }
+    return { ok: false, status: null, error: res.error }
+  }
+
+  return { user, role, name, email, ready, isVerified, can, signIn, signOut, redeemVouch, requestResponder, checkResponderRequest }
 })

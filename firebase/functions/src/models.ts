@@ -14,15 +14,16 @@ export const echoSchema = z.object({
 // Admin-role management (Command only):
 export const adminUserSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["authority", "command"]),
+  role: z.enum(["authority", "command", "sudo"]),
 });
 
 export const adminEmailSchema = z.object({
   email: z.string().email(),
 });
 
-// A signed-in Google user requests vouching access.
+// A signed-in Google user requests access (coordinator or responder).
 export const accessRequestSchema = z.object({
+  phone: z.string().min(5),
   note: z.string().max(500).optional(),
 });
 
@@ -108,4 +109,41 @@ export const hospitalInputSchema = z.object({
   hospitalName: z.string().min(2),
   textInput: z.string().optional(),
   imageBase64: z.string().optional(),
+});
+
+export const hubCreateSchema = z.object({
+  name: z.string().min(3),
+  address: z.string().min(3),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  contactPhone: z.string().min(5),
+  contactName: z.string().min(2),
+  whatsappGroup: z.string().optional(),
+});
+
+export const hubUpdateSchema = z.object({
+  name: z.string().min(3).optional(),
+  address: z.string().min(3).optional(),
+  contactPhone: z.string().min(5).optional(),
+  contactName: z.string().min(2).optional(),
+  whatsappGroup: z.string().optional(),
+  status: z.enum(["active", "closed"]).optional(),
+});
+
+export const inventoryUpsertSchema = z.object({
+  category: z.enum(["water", "food", "tools", "medical", "shelter", "clothing", "hygiene", "other"]),
+  name: z.string().min(1),
+  quantity: z.number().min(0),
+  unit: z.string().min(1),
+  urgency: z.enum(["available", "low", "depleted"]).optional(),
+});
+
+export const inventoryAdjustSchema = z.object({
+  delta: z.number(),
+  action: z.enum(["restock", "distribute", "adjust"]),
+  note: z.string().optional(),
+});
+
+export const hubCoordinatorSchema = z.object({
+  email: z.string().email(),
 });

@@ -13,7 +13,7 @@ const { t, tm, rt } = useI18n()
 const router = useRouter()
 
 const slide = ref(0)
-const TOTAL = 3
+const TOTAL = 4
 
 function next() { if (slide.value < TOTAL - 1) slide.value++ }
 function back() { if (slide.value > 0) slide.value-- }
@@ -61,9 +61,9 @@ const slide2Tabs  = tm('welcome.slide2.tabs')  as Record<string, { title: string
     >
       <div class="relative flex w-full max-w-md flex-col overflow-y-auto rounded-3xl bg-white shadow-2xl max-h-[90dvh]">
 
-        <!-- Skip button (slides 1 & 2 only) -->
+        <!-- Skip button (slides 1, 2 & 3 only) -->
         <button
-          v-if="slide < 2"
+          v-if="slide < 3"
           class="absolute right-4 top-4 z-10 rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
           @click="dismiss"
         >
@@ -124,7 +124,52 @@ const slide2Tabs  = tm('welcome.slide2.tabs')  as Record<string, { title: string
           </div>
         </div>
 
-        <!-- ── SLIDE 3 — Roles ── -->
+        <!-- ── SLIDE 3 — Resource Hubs & WhatsApp Coordination ── -->
+        <div v-else-if="slide === 2" class="flex flex-col gap-5 p-8">
+          <!-- Icon -->
+          <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg">
+            <MaterialIcon name="warehouse" :size="34" />
+          </div>
+
+          <div class="space-y-2">
+            <p class="text-xs font-bold uppercase tracking-widest text-indigo-600">{{ t('welcome.slide3_hubs.label') }}</p>
+            <h2 class="text-2xl font-bold leading-tight text-slate-900">{{ t('welcome.slide3_hubs.heading') }}</h2>
+            <p class="text-sm leading-relaxed text-slate-600">{{ t('welcome.slide3_hubs.body') }}</p>
+          </div>
+
+          <!-- Coordination CTA -->
+          <div class="rounded-2xl bg-indigo-50 p-4 ring-1 ring-indigo-200 space-y-2">
+            <p class="text-xs font-semibold text-indigo-900 flex items-center gap-1.5">
+              <MaterialIcon name="groups" :size="16" />
+              {{ t('welcome.slide3_hubs.coordTitle') }}
+            </p>
+            <p class="text-xs text-indigo-800/80 leading-normal">
+              {{ t('welcome.slide3_hubs.coordBody') }}
+            </p>
+            <a 
+              href="https://wa.me/584120000000?text=Hola,%20quiero%20ayudar%20a%20coordinar%20un%20centro%20de%20acopio" 
+              target="_blank" 
+              class="inline-flex items-center gap-1 text-xs font-bold text-indigo-950 underline underline-offset-2 hover:text-indigo-700"
+            >
+              {{ t('welcome.slide3_hubs.coordCta') }}
+              <MaterialIcon name="open_in_new" :size="12" />
+            </a>
+          </div>
+
+          <div class="flex gap-2">
+            <button
+              class="flex items-center gap-1 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100"
+              @click="back"
+            >
+              <MaterialIcon name="arrow_back" :size="16" /> {{ t('welcome.back') }}
+            </button>
+            <BaseButton class="flex-1" @click="next">
+              {{ t('welcome.next') }} <MaterialIcon name="arrow_forward" :size="18" class="ml-1 inline-block" />
+            </BaseButton>
+          </div>
+        </div>
+
+        <!-- ── SLIDE 4 — Roles ── -->
         <div v-else class="flex flex-col gap-4 p-8">
           <div class="space-y-1">
             <p class="text-xs font-bold uppercase tracking-widest text-rose-600">{{ t('welcome.slide3.label') }}</p>

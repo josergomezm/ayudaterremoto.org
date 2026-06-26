@@ -26,6 +26,7 @@ const nav = [
   { name: 'alerts', to: '/alerts', label: 'shell.nav.alerts', icon: 'campaign' },
   { name: 'guides', to: '/guides', label: 'shell.nav.guides', icon: 'menu_book' },
   { name: 'people', to: '/people', label: 'shell.nav.people', icon: 'person_search' },
+  { name: 'hubs', to: '/hubs', label: 'shell.nav.hubs', icon: 'warehouse' },
   { name: 'about', to: '/about', label: 'shell.nav.about', icon: 'info' },
 ]
 
@@ -110,7 +111,7 @@ function isActive(to: string): boolean {
 
       <!-- ── MOBILE BOTTOM NAV (below md) ───────────────────────────── -->
       <nav class="fixed bottom-0 left-0 right-0 z-50 pb-safe border-t border-slate-200 bg-white md:hidden">
-        <div class="grid grid-cols-6">
+        <div class="grid grid-cols-7">
           <RouterLink
             v-for="item in nav"
             :key="item.name"

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { useIncidentsStore } from '../stores/incidents'
 import { useSessionStore } from '../stores/session'
+import { useHubsStore } from '../stores/hubs'
 import IncidentCard from '../components/IncidentCard.vue'
 import IncidentMap from '../components/IncidentMap.vue'
 import Loader from '../components/Loader.vue'
@@ -13,13 +14,26 @@ import OnboardingBanner from '../components/OnboardingBanner.vue'
 const { t } = useI18n()
 const store = useIncidentsStore()
 const session = useSessionStore()
+const hubsStore = useHubsStore()
 
 const filterCategory = ref<'all' | 'medical' | 'structural' | 'obstruction' | 'resource'>('all')
 const filterStatus = ref<'all' | 'red' | 'yellow' | 'green'>('all')
 const sortBy = ref<'newest' | 'oldest' | 'severity-desc' | 'severity-asc'>('newest')
 const viewMode = ref<'grid' | 'list'>('grid')
+const showHubs = ref(true)
 
-onMounted(() => { if (store.incidents.length === 0) store.fetchAll() })
+const mapHubs = computed(() => {
+  return showHubs.value ? hubsStore.activeHubs : []
+})
+
+const mapKey = computed(() => {
+  return `map-${showHubs.value}-${mapHubs.value.length}-${filteredActive.value.length}`
+})
+
+onMounted(() => {
+  if (store.incidents.length === 0) store.fetchAll()
+  hubsStore.fetchAll()
+})
 
 // Filter and sort active incidents
 const filteredActive = computed(() => {
@@ -78,14 +92,22 @@ const filteredCleared = computed(() => {
 
 <template>
   <div class="mx-auto space-y-5 p-4 max-w-4xl">
-    <header class="space-y-1">
-      <h1 class="text-xl font-bold text-slate-900">{{ t('map.title') }}</h1>
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="space-y-1">
+        <h1 class="text-xl font-bold text-slate-900">{{ t('map.title') }}</h1>
+      </div>
+      <div class="flex items-center">
+        <label class="inline-flex items-center gap-2 cursor-pointer rounded-xl bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition">
+          <input type="checkbox" v-model="showHubs" class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer" />
+          {{ t('hubs.mapLayerLabel') }}
+        </label>
+      </div>
     </header>
 
     <!-- Role-aware onboarding hint for unverified / civilian users -->
     <OnboardingBanner />
     <!-- Interactive map (Leaflet + OpenStreetMap) -->
-    <IncidentMap :incidents="filteredActive" />
+    <IncidentMap :key="mapKey" :incidents="filteredActive" :hubs="mapHubs" />
 
     <!-- Filter and Sort Controls -->
     <div class="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">

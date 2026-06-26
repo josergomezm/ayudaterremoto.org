@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '../stores/session'
 import BaseButton from '../components/BaseButton.vue'
@@ -8,10 +8,43 @@ import MaterialIcon from '../components/MaterialIcon.vue'
 const { t, tm, rt } = useI18n()
 const session = useSessionStore()
 
-const vouchCode = ref('')
 const message = ref<string | null>(null)
 const messageType = ref<'success' | 'error' | null>(null)
 const busy = ref(false)
+
+const requestNote = ref('')
+const requestPhone = ref('')
+const requestStatus = ref<string | null>(null)
+
+async function loadRequestStatus() {
+  if (session.role === 'civilian') {
+    busy.value = true
+    try {
+      const res = await session.checkResponderRequest()
+      if (res.ok) {
+        requestStatus.value = res.status
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      busy.value = false
+    }
+  }
+}
+
+watch(() => [session.role, session.isVerified], () => {
+  if (session.isVerified) {
+    loadRequestStatus()
+  } else {
+    requestStatus.value = null
+  }
+}, { immediate: true })
+
+onMounted(() => {
+  if (session.isVerified) {
+    loadRequestStatus()
+  }
+})
 
 async function doSignIn() {
   busy.value = true
@@ -33,6 +66,7 @@ async function doSignOut() {
   messageType.value = null
   try {
     await session.signOut()
+    requestStatus.value = null
   } catch (err) {
     message.value = err instanceof Error ? err.message : String(err)
     messageType.value = 'error'
@@ -41,17 +75,19 @@ async function doSignOut() {
   }
 }
 
-async function doRedeem() {
-  if (!vouchCode.value) return
+async function doSubmitRequest() {
+  if (requestPhone.value.trim().length < 5) return
   busy.value = true
   message.value = null
   messageType.value = null
-  const res = await session.redeemVouch(vouchCode.value)
+  const res = await session.requestResponder(requestPhone.value, requestNote.value)
   busy.value = false
   if (res.ok) {
-    message.value = t('verify.success')
+    message.value = t('verify.requestSuccess')
     messageType.value = 'success'
-    vouchCode.value = ''
+    requestStatus.value = 'pending'
+    requestNote.value = ''
+    requestPhone.value = ''
   } else {
     message.value = res.error || t('verify.failed')
     messageType.value = 'error'
@@ -77,7 +113,7 @@ function getRoleLabel(role: string) {
     <!-- Alert / Toast Banner inside the page -->
     <div
       v-if="message"
-      class="rounded-xl p-4 text-sm font-medium ring-1"
+      class="rounded-xl p-4 text-sm font-medium ring-1 animate-fadeIn"
       :class="messageType === 'success' ? 'bg-emerald-50 text-emerald-950 ring-emerald-100' : 'bg-red-50 text-red-950 ring-red-100'"
     >
       <div class="flex items-center gap-2">
@@ -148,19 +184,46 @@ function getRoleLabel(role: string) {
         </ul>
       </div>
 
-      <!-- Vouch Code Elevation -->
-      <div v-if="session.role === 'civilian'" class="rounded-2xl bg-indigo-50/50 p-6 ring-1 ring-indigo-100 space-y-4">
-        <div class="space-y-1">
-          <h2 class="font-bold text-indigo-950">{{ t('verify.vouchPrompt') }}</h2>
-          <p class="text-xs text-indigo-900/70">{{ t('verify.vouchHint') }}</p>
+      <!-- Volunteer Request Flow -->
+      <div v-if="session.role === 'civilian'" class="space-y-4">
+        <!-- Pending State -->
+        <div v-if="requestStatus === 'pending'" class="rounded-2xl bg-amber-50 p-6 ring-1 ring-amber-200 space-y-2 text-amber-950">
+          <div class="flex items-center gap-2 font-bold">
+            <MaterialIcon name="pending" class="text-amber-600 animate-pulse" :size="20" />
+            <span>{{ t('verify.requestTitle') }}</span>
+          </div>
+          <p class="text-sm">{{ t('verify.requestPending') }}</p>
         </div>
-        <div class="flex gap-2">
-          <input
-            v-model="vouchCode"
-            :placeholder="t('verify.vouchPlaceholder')"
-            class="min-w-0 flex-1 rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm uppercase ring-offset-indigo-50 focus:border-indigo-500 focus:outline-none"
-          />
-          <BaseButton :disabled="busy || !vouchCode" @click="doRedeem">{{ t('verify.confirm') }}</BaseButton>
+
+        <!-- Request Form -->
+        <div v-else class="rounded-2xl bg-indigo-50/50 p-6 ring-1 ring-indigo-100 space-y-4">
+          <div class="space-y-1">
+            <h2 class="font-bold text-indigo-950">{{ t('verify.requestTitle') }}</h2>
+            <p class="text-xs text-indigo-900/70">{{ t('verify.requestDesc') }}</p>
+          </div>
+          <div class="space-y-3">
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-indigo-950/70 uppercase tracking-wider">{{ t('verify.phoneLabel') }} *</label>
+              <input
+                v-model="requestPhone"
+                type="tel"
+                :placeholder="t('verify.phonePlaceholder')"
+                class="w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-indigo-950/70 uppercase tracking-wider">{{ t('verify.requestNotePlaceholder') }}</label>
+              <textarea
+                v-model="requestNote"
+                :placeholder="t('verify.requestNotePlaceholder')"
+                rows="3"
+                class="w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm ring-offset-indigo-50 focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <BaseButton block :disabled="busy || requestPhone.trim().length < 5" @click="doSubmitRequest">
+              {{ t('verify.requestButton') }}
+            </BaseButton>
+          </div>
         </div>
       </div>
 

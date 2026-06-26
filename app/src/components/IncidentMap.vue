@@ -3,8 +3,12 @@ import { onMounted, onBeforeUnmount, watch, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import * as L from 'leaflet'
 import type { Incident } from '../stores/incidents'
+import type { ResourceHub } from '../stores/hubs'
 
-const props = defineProps<{ incidents: Incident[] }>()
+const props = defineProps<{ 
+  incidents: Incident[]
+  hubs?: ResourceHub[]
+}>()
 const router = useRouter()
 
 const el = ref<HTMLElement | null>(null)
@@ -20,6 +24,7 @@ function render() {
   if (!map || !markers) return
   markers.clearLayers()
   const pts: L.LatLngTuple[] = []
+  
   for (const i of props.incidents) {
     const fill = i.evacuated ? '#64748b' : (COLORS[i.status] ?? '#64748b')
     const marker = L.circleMarker([i.lat, i.lng], {
@@ -29,6 +34,30 @@ function render() {
     marker.addTo(markers)
     pts.push([i.lat, i.lng])
   }
+
+  if (props.hubs) {
+    for (const h of props.hubs) {
+      const marker = L.circleMarker([h.lat, h.lng], {
+        radius: 10,
+        weight: 3,
+        color: '#ffffff',
+        fillColor: h.status === 'active' ? '#6366f1' : '#94a3b8',
+        fillOpacity: 0.95,
+      })
+      marker.bindPopup(`
+        <div class="p-1 font-sans text-slate-800">
+          <h3 class="text-sm font-bold text-slate-900">${h.name}</h3>
+          <p class="text-xs text-slate-500 my-1">${h.address}</p>
+          <div class="mt-2 text-xs font-semibold text-indigo-600">
+            <a href="/hubs/${h.id}" class="hover:underline">Ver detalles del centro</a>
+          </div>
+        </div>
+      `)
+      marker.addTo(markers)
+      pts.push([h.lat, h.lng])
+    }
+  }
+
   if (pts.length) map.fitBounds(pts, { padding: [40, 40], maxZoom: 15 })
 }
 
