@@ -11,8 +11,6 @@ const { t } = useI18n()
 const toast = useToast()
 const admin = useAdminStore()
 
-const code = ref('')
-const copied = ref(false)
 const audit = ref<AuditEntry[]>([])
 const activity = ref<AuditLogEntry[]>([])
 const admins = ref<AdminUser[]>([])
@@ -165,16 +163,7 @@ async function revokeResponder(email: string) {
   else toast.error(r.error || t('common.error'))
 }
 
-async function generate() {
-  const r = await admin.generateCode()
-  if (r.ok) { code.value = r.data.code; copied.value = false }
-  else toast.error(r.error || t('common.error'))
-}
-function copyCode() {
-  navigator.clipboard?.writeText(code.value)
-  copied.value = true
-  toast.success(t('admin.copied'))
-}
+
 async function addAdmin() {
   if (!newEmail.value) return
   const r = await admin.setAdmin(newEmail.value, newRole.value)
