@@ -9,6 +9,8 @@ import triage from './locales/configs/triage'
 import category from './locales/configs/category'
 import shell from './locales/components/shell'
 import offline from './locales/components/offline'
+import welcome from './locales/components/welcome'
+import onboarding from './locales/components/onboarding'
 import map from './locales/pages/map'
 import detail from './locales/pages/detail'
 import report from './locales/pages/report'
@@ -34,6 +36,8 @@ const messages = {
     category: category.es,
     shell: shell.es,
     offline: offline.es,
+    welcome: welcome.es,
+    onboarding: onboarding.es,
     map: map.es,
     detail: detail.es,
     report: report.es,
@@ -52,6 +56,8 @@ const messages = {
     category: category.en,
     shell: shell.en,
     offline: offline.en,
+    welcome: welcome.en,
+    onboarding: onboarding.en,
     map: map.en,
     detail: detail.en,
     report: report.en,

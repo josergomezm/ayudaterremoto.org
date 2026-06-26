@@ -5,7 +5,7 @@ import { useSessionStore } from '../stores/session'
 import BaseButton from '../components/BaseButton.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
 
-const { t } = useI18n()
+const { t, tm, rt } = useI18n()
 const session = useSessionStore()
 
 const vouchCode = ref('')
@@ -128,6 +128,24 @@ function getRoleLabel(role: string) {
             {{ getRoleLabel(session.role ?? 'civilian') }}
           </span>
         </div>
+      </div>
+
+      <!-- Civilian benefits card: what just unlocked -->
+      <div v-if="session.role === 'civilian'" class="rounded-2xl bg-emerald-50 p-5 ring-1 ring-emerald-200 space-y-3">
+        <div class="flex items-center gap-2">
+          <MaterialIcon name="check_circle" :size="20" class="text-emerald-600" />
+          <h2 class="text-sm font-bold text-emerald-900">{{ t('verify.civilianBenefitsTitle') }}</h2>
+        </div>
+        <ul class="space-y-1.5">
+          <li
+            v-for="(benefit, i) in (tm('verify.civilianBenefits') as string[])"
+            :key="i"
+            class="flex items-start gap-2 text-xs text-emerald-900/80"
+          >
+            <MaterialIcon name="arrow_right" :size="16" class="mt-0.5 shrink-0 text-emerald-500" />
+            {{ rt(benefit) }}
+          </li>
+        </ul>
       </div>
 
       <!-- Vouch Code Elevation -->

@@ -14,7 +14,7 @@ exports.analyzePatientList = analyzePatientList;
 exports.fuzzyNameMatch = fuzzyNameMatch;
 const v2_1 = require("firebase-functions/v2");
 const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-const TIMEOUT_MS = 5000;
+const TIMEOUT_MS = 15000;
 async function assessReport(opts) {
     const { description, category, declaredLevel, apiKey } = opts;
     if (!apiKey || !description)
@@ -105,7 +105,7 @@ async function analyzeImage(opts) {
         "- obstructionType: 'landslide' | 'debris' | 'trees' | 'vehicles' | 'other' | null (only if category is 'obstruction')\n\n" +
         "Return ONLY the raw JSON object. Do not include markdown code block formatting or any other text.";
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000); // 10s timeout for image analysis
+    const timer = setTimeout(() => controller.abort(), 30000); // 30s timeout for image analysis
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
             method: "POST",
@@ -223,7 +223,7 @@ async function analyzePatientList(opts) {
         "- notes: string | null (any additional context if mentioned, like age, injury/condition, or ward. Keep it under 100 characters. Set to null if none)\n\n" +
         "Return ONLY the raw JSON array. Do not include markdown code block formatting (like ```json) or any other text.";
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000); // 15s timeout for lists
+    const timer = setTimeout(() => controller.abort(), 45000); // 45s timeout for lists
     try {
         const parts = [{ text: prompt }];
         if (base64Data && mimeType) {

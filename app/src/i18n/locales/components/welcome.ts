@@ -1,0 +1,108 @@
+// Copy is written for a crisis context — people are scared and need to act fast.
+// Keep sentences short, verbs first, no bureaucratic language.
+
+const es = {
+  slide1: {
+    label: 'Paso 1 de 3',
+    heading: 'Aquí coordinamos la ayuda',
+    body: 'Ayuda Terremoto conecta a personas afectadas con voluntarios y brigadas. Puedes reportar emergencias, buscar personas desaparecidas y ver qué está pasando en tu zona, incluso sin conexión.',
+  },
+  slide2: {
+    label: 'Paso 2 de 3',
+    heading: '¿Qué puedes hacer?',
+    tabs: {
+      map: { title: 'Mapa', desc: 'Ve todos los incidentes activos en tu área ordenados por gravedad.' },
+      report: { title: 'Reportar', desc: 'Reporta una emergencia para ti o para otra persona. Requiere verificación.' },
+      alerts: { title: 'Alertas', desc: 'Avisos oficiales del Comando de respuesta. Léelos primero.' },
+      guides: { title: 'Guías', desc: 'Instrucciones de seguridad para sismos, fugas de gas y primeros auxilios. Funcionan sin internet.' },
+      people: { title: 'Consultas', desc: 'Busca desaparecidos, ingresados a hospitales o solicita revisión de edificios.' },
+    },
+  },
+  slide3: {
+    label: 'Paso 3 de 3',
+    heading: 'Niveles de acceso',
+    intro: 'Cuanto más verificado estés, más puedes ayudar. La verificación protege la integridad de los reportes.',
+    roles: {
+      unverified: {
+        name: 'Sin verificar',
+        desc: 'Puedes ver el mapa, leer alertas y consultar guías. No puedes reportar.',
+      },
+      civilian: {
+        name: 'Civil',
+        desc: 'Iniciaste sesión con Google. Puedes reportar emergencias y buscar personas.',
+      },
+      responder: {
+        name: 'Brigadista',
+        desc: 'Un coordinador te dio un código de aval. Puedes actualizar el triaje y gestionar casos.',
+      },
+      authority: {
+        name: 'Autoridad',
+        desc: 'Coordinador oficial. Genera códigos de aval, transmite alertas y revisa reportes.',
+      },
+      command: {
+        name: 'Comando',
+        desc: 'Máxima autoridad de respuesta. Gestiona el equipo y toda la operación.',
+      },
+    },
+    ctaPrimary: 'Verificar identidad',
+    ctaSecondary: 'Explorar primero',
+  },
+  next: 'Siguiente',
+  back: 'Atrás',
+  skip: 'Omitir',
+  dotAria: 'Ir al paso {n}',
+}
+
+const en: typeof es = {
+  slide1: {
+    label: 'Step 1 of 3',
+    heading: 'This is where we coordinate aid',
+    body: 'Ayuda Terremoto connects affected people with volunteers and response teams. You can report emergencies, search for missing people, and see what\'s happening in your area — even offline.',
+  },
+  slide2: {
+    label: 'Step 2 of 3',
+    heading: 'What can you do?',
+    tabs: {
+      map: { title: 'Map', desc: 'See all active incidents in your area, sorted by severity.' },
+      report: { title: 'Report', desc: 'Report an emergency for yourself or someone else. Requires verification.' },
+      alerts: { title: 'Alerts', desc: 'Official Command broadcasts. Read these first.' },
+      guides: { title: 'Guides', desc: 'Safety instructions for earthquakes, gas leaks, and first aid. Work without internet.' },
+      people: { title: 'Search', desc: 'Look up missing persons, hospital admissions, or request a building check.' },
+    },
+  },
+  slide3: {
+    label: 'Step 3 of 3',
+    heading: 'Access levels',
+    intro: 'The more verified you are, the more you can do. Verification protects the integrity of all reports.',
+    roles: {
+      unverified: {
+        name: 'Unverified',
+        desc: 'You can view the map, read alerts, and check guides. You cannot file reports.',
+      },
+      civilian: {
+        name: 'Civilian',
+        desc: 'Signed in with Google. You can report emergencies and search for people.',
+      },
+      responder: {
+        name: 'Responder',
+        desc: 'A coordinator gave you a vouch code. You can update triage and manage cases.',
+      },
+      authority: {
+        name: 'Authority',
+        desc: 'Official coordinator. Issue vouch codes, broadcast alerts, and review reports.',
+      },
+      command: {
+        name: 'Command',
+        desc: 'Highest response authority. Manages the full team and all operations.',
+      },
+    },
+    ctaPrimary: 'Verify identity',
+    ctaSecondary: 'Explore first',
+  },
+  next: 'Next',
+  back: 'Back',
+  skip: 'Skip',
+  dotAria: 'Go to step {n}',
+}
+
+export default { es, en }

@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { RouterLink } from 'vue-router'
 import { useIncidentsStore } from '../stores/incidents'
+import { useSessionStore } from '../stores/session'
 import IncidentCard from '../components/IncidentCard.vue'
 import IncidentMap from '../components/IncidentMap.vue'
 import Loader from '../components/Loader.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
+import OnboardingBanner from '../components/OnboardingBanner.vue'
 
 const { t } = useI18n()
 const store = useIncidentsStore()
+const session = useSessionStore()
 
 const filterCategory = ref<'all' | 'medical' | 'structural' | 'obstruction' | 'resource'>('all')
 const filterStatus = ref<'all' | 'red' | 'yellow' | 'green'>('all')
@@ -78,6 +82,8 @@ const filteredCleared = computed(() => {
       <h1 class="text-xl font-bold text-slate-900">{{ t('map.title') }}</h1>
     </header>
 
+    <!-- Role-aware onboarding hint for unverified / civilian users -->
+    <OnboardingBanner />
     <!-- Interactive map (Leaflet + OpenStreetMap) -->
     <IncidentMap :incidents="filteredActive" />
 
@@ -143,7 +149,33 @@ const filteredCleared = computed(() => {
 
     <p v-if="store.error" class="rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ t('map.loadError') }}</p>
     <Loader v-else-if="store.loading" :label="t('common.loading')" class="py-4" />
-    <p v-else-if="store.incidents.length === 0" class="text-sm text-slate-500">{{ t('map.empty') }}</p>
+
+    <!-- Empty state: no incidents at all -->
+    <div
+      v-else-if="store.incidents.length === 0"
+      class="flex flex-col items-center gap-3 rounded-2xl bg-slate-50 p-8 text-center ring-1 ring-slate-200"
+    >
+      <span class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-slate-500">
+        <MaterialIcon name="map" :size="26" />
+      </span>
+      <p class="text-sm font-medium text-slate-600">{{ t('map.empty') }}</p>
+      <RouterLink
+        v-if="session.isVerified"
+        to="/report"
+        class="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+      >
+        <MaterialIcon name="add_circle" :size="16" />
+        {{ t('map.emptyReportCta') }}
+      </RouterLink>
+      <RouterLink
+        v-else
+        to="/verify"
+        class="text-xs text-slate-500 underline underline-offset-2"
+      >
+        {{ t('map.emptyVerifyCta') }}
+      </RouterLink>
+    </div>
+
     <p v-else-if="filteredActive.length === 0 && filteredCleared.length === 0" class="text-sm text-slate-500">{{ t('map.filters.noResults') }}</p>
 
     <!-- Active Reports -->

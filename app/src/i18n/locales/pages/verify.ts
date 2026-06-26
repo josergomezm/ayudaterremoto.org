@@ -16,6 +16,13 @@ const es = {
   roleAuthority: 'Autoridad',
   roleCommand: 'Comando',
   alreadyResponder: 'Ya tiene el rol de Brigadista o superior.',
+  civilianBenefitsTitle: '¿Qué puedes hacer ahora?',
+  civilianBenefits: [
+    'Reportar emergencias para ti o para otra persona',
+    'Buscar personas desaparecidas o ingresadas a hospitales',
+    'Solicitar revisión del estado de un edificio',
+    'Pedir un código de aval a un coordinador para convertirte en Brigadista',
+  ],
 }
 
 const en: typeof es = {
@@ -36,6 +43,13 @@ const en: typeof es = {
   roleAuthority: 'Authority',
   roleCommand: 'Command',
   alreadyResponder: 'You already have the Responder role or higher.',
+  civilianBenefitsTitle: 'What can you do now?',
+  civilianBenefits: [
+    'File emergency reports for yourself or someone else',
+    'Search for missing people or hospital admissions',
+    'Request a building status check',
+    'Ask a coordinator for a vouch code to become a Responder',
+  ],
 }
 
 export default { es, en }

@@ -14,7 +14,7 @@ export interface AiAssessment {
 }
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-const TIMEOUT_MS = 5000;
+const TIMEOUT_MS = 15000;
 
 export async function assessReport(opts: {
   description: string;
@@ -137,7 +137,7 @@ export async function analyzeImage(opts: {
     "Return ONLY the raw JSON object. Do not include markdown code block formatting or any other text.";
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000); // 10s timeout for image analysis
+  const timer = setTimeout(() => controller.abort(), 30000); // 30s timeout for image analysis
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -265,7 +265,7 @@ export async function analyzePatientList(opts: {
     "Return ONLY the raw JSON array. Do not include markdown code block formatting (like ```json) or any other text.";
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000); // 15s timeout for lists
+  const timer = setTimeout(() => controller.abort(), 45000); // 45s timeout for lists
   try {
     const parts: any[] = [{ text: prompt }];
     if (base64Data && mimeType) {

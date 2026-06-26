@@ -13,6 +13,10 @@ const { t, tm, rt } = useI18n()
 const GITHUB_URL = 'https://github.com/josergomezm/ayudaterremoto.org'
 const howSteps = tm('about.how') as unknown[]
 
+function replayIntro() {
+  window.dispatchEvent(new Event('ayudaterremoto:replay-welcome'))
+}
+
 // Calls GET /health to prove the full app → Cloud Function path end to end.
 const { data, error, loading, execute } = useApi<{ ok: boolean; ts: string }>('/health')
 onMounted(() => execute())
@@ -90,6 +94,17 @@ onMounted(() => execute())
       >
         <MaterialIcon name="code" :size="20" /> {{ t('about.viewOnGithub') }}
       </a>
+    </div>
+
+    <!-- Replay intro -->
+    <div class="text-center">
+      <button
+        class="inline-flex items-center gap-1.5 text-xs text-slate-400 transition hover:text-slate-600"
+        @click="replayIntro"
+      >
+        <MaterialIcon name="play_circle" :size="16" />
+        {{ t('about.replayIntro') }}
+      </button>
     </div>
   </section>
 </template>

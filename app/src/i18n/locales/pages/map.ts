@@ -4,6 +4,8 @@ const es = {
   cleared: 'Sitios despejados',
   active: 'Incidentes activos',
   empty: 'Aún no hay incidentes reportados.',
+  emptyReportCta: 'Reportar un incidente',
+  emptyVerifyCta: 'Verifica tu identidad para poder reportar',
   shuffle: 'Reordenar',
   loadError: 'No se pudieron cargar los incidentes.',
   filters: {
@@ -40,6 +42,8 @@ const en: typeof es = {
   cleared: 'Cleared sites',
   active: 'Active incidents',
   empty: 'No incidents reported yet.',
+  emptyReportCta: 'Report an incident',
+  emptyVerifyCta: 'Verify your identity to start reporting',
   shuffle: 'Reorder',
   loadError: 'Could not load incidents.',
   filters: {
