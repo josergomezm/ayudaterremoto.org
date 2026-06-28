@@ -8,7 +8,7 @@ const es = {
   message: 'Mensaje',
   messagePlaceholder: 'ej. Estación de agua abierta en Plaza Bolívar.',
   broadcast: 'Transmitir',
-  commandOnly: 'Solo Comando puede transmitir alertas.',
+  commandOnly: 'Solo un Organizador puede transmitir alertas.',
   sent: 'Alerta transmitida.',
 }
 
@@ -22,7 +22,7 @@ const en: typeof es = {
   message: 'Message',
   messagePlaceholder: 'e.g. Water station open at Plaza Bolívar.',
   broadcast: 'Broadcast',
-  commandOnly: 'Only Command can broadcast alerts.',
+  commandOnly: 'Only an Organizer can broadcast alerts.',
   sent: 'Alert broadcast.',
 }
 

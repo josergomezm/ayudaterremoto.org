@@ -4,8 +4,8 @@ import { apiFetch } from '../lib/api'
 import { auth, googleProvider } from '../lib/firebase'
 import { signInWithPopup, signOut as fbSignOut, onAuthStateChanged, type User } from 'firebase/auth'
 
-export type Role = 'civilian' | 'responder' | 'authority' | 'command' | 'sudo'
-const RANK: Record<Role, number> = { civilian: 0, responder: 1, authority: 2, command: 3, sudo: 4 }
+export type Role = 'colaborador' | 'coordinador' | 'organizador' | 'fundador'
+const RANK: Record<Role, number> = { colaborador: 0, coordinador: 1, organizador: 2, fundador: 3 }
 
 export const useSessionStore = defineStore('session', () => {
   const user = ref<User | null>(null)
@@ -43,7 +43,7 @@ export const useSessionStore = defineStore('session', () => {
         email.value = profile.email
       } else {
         // Fallback profile if server is not responding yet
-        role.value = 'civilian'
+        role.value = 'colaborador'
         name.value = u.displayName || u.email || 'Google User'
         email.value = u.email
       }

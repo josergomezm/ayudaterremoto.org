@@ -31,7 +31,7 @@ const coordinators = computed(() => {
 
 const hasAccess = computed(() => {
   if (!session.ready) return true // Show loader, don't block immediately
-  if (session.can('command') || admin.isAdmin) return true
+  if (admin.isAdmin) return true // Organizador+ supervisa todas las zonas
   if (hub.value) {
     if (hub.value.createdBy === session.email) return true
     return coordinators.value.some((c: any) => c.email === session.email)
@@ -262,7 +262,7 @@ async function onRemoveCoordinator(email: string) {
         <MaterialIcon name="gpp_maybe" :size="28" />
       </div>
       <h2 class="text-lg font-bold text-slate-900">{{ t('admin.noAccess') || 'Acceso Denegado' }}</h2>
-      <p class="text-sm text-slate-500">{{ t('admin.noAccessBody') || 'No tiene permisos para administrar este centro de acopio.' }}</p>
+      <p class="text-sm text-slate-500">{{ t('admin.noAccessBody') || 'No tiene permisos para administrar esta zona.' }}</p>
       <RouterLink to="/hubs" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 shadow-sm cursor-pointer">
         {{ t('hubs.backToHubs') }}
       </RouterLink>
@@ -691,7 +691,7 @@ async function onRemoveCoordinator(email: string) {
                   :key="u.email" 
                   :value="u.email"
                 >
-                  {{ u.email }} ({{ u.role === 'command' ? 'Comando' : 'Autoridad' }})
+                  {{ u.email }} ({{ t('roles.' + u.role) }})
                 </option>
               </select>
             </div>

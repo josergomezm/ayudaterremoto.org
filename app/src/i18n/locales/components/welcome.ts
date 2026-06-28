@@ -13,17 +13,17 @@ const es = {
     tabs: {
       map: { title: 'Mapa', desc: 'Ve todos los incidentes activos en tu área ordenados por gravedad.' },
       report: { title: 'Reportar', desc: 'Reporta una emergencia para ti o para otra persona. Requiere verificación.' },
-      alerts: { title: 'Alertas', desc: 'Avisos oficiales del Comando de respuesta. Léelos primero.' },
+      alerts: { title: 'Alertas', desc: 'Avisos oficiales del equipo de respuesta. Léelos primero.' },
       guides: { title: 'Guías', desc: 'Instrucciones de seguridad para sismos, fugas de gas y primeros auxilios. Funcionan sin internet.' },
       people: { title: 'Consultas', desc: 'Busca desaparecidos, ingresados a hospitales o solicita revisión de edificios.' },
     },
   },
   slide3_hubs: {
     label: 'Paso 3 de 4',
-    heading: 'Centros de Acopio y Alivio',
-    body: 'Hemos habilitado un mapa y listado de centros de acopio donde se distribuye agua, comida, herramientas y refugio. Cualquiera puede ver la disponibilidad y urgencia en tiempo real para donar o solicitar ayuda.',
+    heading: 'Zonas de Acopio y Alivio',
+    body: 'Hemos habilitado un mapa y listado de zonas donde se distribuye agua, comida, herramientas y refugio. Cualquiera puede ver la disponibilidad y urgencia en tiempo real para donar o solicitar ayuda.',
     coordTitle: 'Ayuda con la coordinación',
-    coordBody: '¿Quieres coordinar o gestionar el inventario de un centro? Solicita acceso para unirte a nuestros grupos de trabajo de WhatsApp.',
+    coordBody: '¿Quieres coordinar o gestionar el inventario de una zona? Solicita acceso para unirte a nuestros grupos de trabajo de WhatsApp.',
     coordCta: 'Contactar Coordinación en WhatsApp',
   },
   slide3: {
@@ -35,21 +35,21 @@ const es = {
         name: 'Sin verificar',
         desc: 'Puedes ver el mapa, leer alertas y consultar guías. No puedes reportar.',
       },
-      civilian: {
-        name: 'Civil',
+      colaborador: {
+        name: 'Colaborador',
         desc: 'Iniciaste sesión con Google. Puedes reportar emergencias y buscar personas.',
       },
-      responder: {
-        name: 'Brigadista',
-        desc: 'Un coordinador te dio un código de aval. Puedes actualizar el triaje y gestionar casos.',
+      coordinador: {
+        name: 'Coordinador',
+        desc: 'Te dieron un código de aval. Puedes actualizar estados y gestionar tu zona.',
       },
-      authority: {
-        name: 'Autoridad',
-        desc: 'Coordinador oficial. Genera códigos de aval, transmite alertas y revisa reportes.',
+      organizador: {
+        name: 'Organizador',
+        desc: 'Coordinas la operación: creas zonas, asignas coordinadores, transmites avisos y revisas reportes.',
       },
-      command: {
-        name: 'Comando',
-        desc: 'Máxima autoridad de respuesta. Gestiona el equipo y toda la operación.',
+      fundador: {
+        name: 'Fundador',
+        desc: 'Administrador raíz. Gestiona el equipo y toda la operación.',
       },
     },
     ctaPrimary: 'Verificar identidad',
@@ -73,17 +73,17 @@ const en: typeof es = {
     tabs: {
       map: { title: 'Map', desc: 'See all active incidents in your area, sorted by severity.' },
       report: { title: 'Report', desc: 'Report an emergency for yourself or someone else. Requires verification.' },
-      alerts: { title: 'Alerts', desc: 'Official Command broadcasts. Read these first.' },
+      alerts: { title: 'Alerts', desc: 'Official response-team broadcasts. Read these first.' },
       guides: { title: 'Guides', desc: 'Safety instructions for earthquakes, gas leaks, and first aid. Work without internet.' },
       people: { title: 'Search', desc: 'Look up missing persons, hospital admissions, or request a building check.' },
     },
   },
   slide3_hubs: {
     label: 'Step 3 of 4',
-    heading: 'Resource Hubs & Relief',
-    body: 'We have enabled a map layer and directory of resource hubs distributing water, food, tools, and shelter. Anyone can see real-time availability and urgency to donate or request aid.',
+    heading: 'Relief Zones',
+    body: 'We have enabled a map layer and directory of zones distributing water, food, tools, and shelter. Anyone can see real-time availability and urgency to donate or request aid.',
     coordTitle: 'Help with coordination',
-    coordBody: 'Do you want to coordinate or manage a hub\'s inventory? Request access to join our WhatsApp working groups.',
+    coordBody: 'Do you want to coordinate or manage a zone\'s inventory? Request access to join our WhatsApp working groups.',
     coordCta: 'Contact Coordination on WhatsApp',
   },
   slide3: {
@@ -95,21 +95,21 @@ const en: typeof es = {
         name: 'Unverified',
         desc: 'You can view the map, read alerts, and check guides. You cannot file reports.',
       },
-      civilian: {
-        name: 'Civilian',
+      colaborador: {
+        name: 'Collaborator',
         desc: 'Signed in with Google. You can report emergencies and search for people.',
       },
-      responder: {
-        name: 'Responder',
-        desc: 'A coordinator gave you a vouch code. You can update triage and manage cases.',
+      coordinador: {
+        name: 'Coordinator',
+        desc: 'You were given a vouch code. You can update statuses and manage your zone.',
       },
-      authority: {
-        name: 'Authority',
-        desc: 'Official coordinator. Issue vouch codes, broadcast alerts, and review reports.',
+      organizador: {
+        name: 'Organizer',
+        desc: 'You run the operation: create zones, assign coordinators, broadcast notices, and review reports.',
       },
-      command: {
-        name: 'Command',
-        desc: 'Highest response authority. Manages the full team and all operations.',
+      fundador: {
+        name: 'Founder',
+        desc: 'Root administrator. Manages the full team and all operations.',
       },
     },
     ctaPrimary: 'Verify identity',

@@ -28,7 +28,7 @@ const submitting = ref(false)
 
 const isAuthorized = computed(() => {
   if (!session.ready) return true // Keep true while checking to prevent layout flash
-  return session.can('authority') || admin.isAdmin
+  return session.can('coordinador') || admin.isAdmin
 })
 
 function onLocationUpdated(loc: { lat: number; lng: number }) {
@@ -80,7 +80,7 @@ async function onSubmit() {
         <MaterialIcon name="gpp_maybe" :size="28" />
       </div>
       <h2 class="text-lg font-bold text-slate-900">{{ t('admin.noAccess') || 'Acceso Denegado' }}</h2>
-      <p class="text-sm text-slate-500">{{ t('admin.noAccessBody') || 'No tiene permisos para crear centros de acopio.' }}</p>
+      <p class="text-sm text-slate-500">{{ t('admin.noAccessBody') || 'No tiene permisos para crear zonas.' }}</p>
       <RouterLink to="/hubs" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 shadow-sm cursor-pointer">
         {{ t('hubs.backToHubs') }}
       </RouterLink>

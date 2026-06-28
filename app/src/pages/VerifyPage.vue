@@ -17,7 +17,7 @@ const requestPhone = ref('')
 const requestStatus = ref<string | null>(null)
 
 async function loadRequestStatus() {
-  if (session.role === 'civilian') {
+  if (session.role === 'colaborador') {
     busy.value = true
     try {
       const res = await session.checkResponderRequest()
@@ -95,10 +95,10 @@ async function doSubmitRequest() {
 }
 
 function getRoleLabel(role: string) {
-  if (role === 'civilian') return t('verify.roleCivilian')
-  if (role === 'responder') return t('verify.roleResponder')
-  if (role === 'authority') return t('verify.roleAuthority')
-  if (role === 'command') return t('verify.roleCommand')
+  if (role === 'colaborador') return t('verify.roleColaborador')
+  if (role === 'coordinador') return t('verify.roleCoordinador')
+  if (role === 'organizador') return t('verify.roleOrganizador')
+  if (role === 'fundador') return t('verify.roleFundador')
   return role
 }
 </script>
@@ -161,13 +161,13 @@ function getRoleLabel(role: string) {
         <div class="border-t border-slate-100 pt-4 flex justify-between items-center text-sm">
           <span class="font-medium text-slate-500">{{ t('verify.activeRole') }}</span>
           <span class="rounded-full bg-slate-100 px-3 py-1 font-bold text-slate-700">
-            {{ getRoleLabel(session.role ?? 'civilian') }}
+            {{ getRoleLabel(session.role ?? 'colaborador') }}
           </span>
         </div>
       </div>
 
-      <!-- Civilian benefits card: what just unlocked -->
-      <div v-if="session.role === 'civilian'" class="rounded-2xl bg-emerald-50 p-5 ring-1 ring-emerald-200 space-y-3">
+      <!-- Collaborator benefits card: what just unlocked -->
+      <div v-if="session.role === 'colaborador'" class="rounded-2xl bg-emerald-50 p-5 ring-1 ring-emerald-200 space-y-3">
         <div class="flex items-center gap-2">
           <MaterialIcon name="check_circle" :size="20" class="text-emerald-600" />
           <h2 class="text-sm font-bold text-emerald-900">{{ t('verify.civilianBenefitsTitle') }}</h2>
@@ -185,7 +185,7 @@ function getRoleLabel(role: string) {
       </div>
 
       <!-- Volunteer Request Flow -->
-      <div v-if="session.role === 'civilian'" class="space-y-4">
+      <div v-if="session.role === 'colaborador'" class="space-y-4">
         <!-- Pending State -->
         <div v-if="requestStatus === 'pending'" class="rounded-2xl bg-amber-50 p-6 ring-1 ring-amber-200 space-y-2 text-amber-950">
           <div class="flex items-center gap-2 font-bold">

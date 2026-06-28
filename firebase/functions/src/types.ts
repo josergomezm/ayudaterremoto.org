@@ -1,13 +1,15 @@
 // Domain types shared across the API. Data now lives in Firestore (see firebase.ts
 // + seed.ts); these describe the document shapes.
 
-export type Role = "civilian" | "responder" | "authority" | "command" | "sudo";
-export type AdminRole = "authority" | "command" | "sudo";
+// Roles (Workstream 1): colapsados a 4 ranks. Authority+Command fusionados en
+// Organizador. Coordinador vive en users/{email}; Organizador+ en adminUsers/{email}.
+export type Role = "colaborador" | "coordinador" | "organizador" | "fundador";
+export type AdminRole = "organizador" | "fundador";
 export type TriageStatus = "green" | "yellow" | "red";
 export type ReportCategory = "medical" | "structural" | "obstruction" | "resource";
 
 export const ROLE_RANK: Record<Role, number> = {
-  civilian: 0, responder: 1, authority: 2, command: 3, sudo: 4,
+  colaborador: 0, coordinador: 1, organizador: 2, fundador: 3,
 };
 
 export interface VouchCode {
@@ -140,6 +142,8 @@ export type HubStatus = "active" | "closed";
 export type InventoryCategory = "water" | "food" | "tools" | "medical" | "shelter" | "clothing" | "hygiene" | "other";
 export type InventoryUrgency = "available" | "low" | "depleted";
 export type HubLogAction = "restock" | "distribute" | "adjust" | "note";
+// Need lifecycle (Workstream 3): un ítem de inventario es una necesidad.
+export type NeedStatus = "abierta" | "tomada" | "confirmada";
 
 export interface ResourceHub {
   id: string;
@@ -164,6 +168,15 @@ export interface InventoryItem {
   unit: string;
   urgency: InventoryUrgency;
   updatedAt: string;
+  // Need lifecycle (Workstream 3). El loop: abierta → tomada → confirmada.
+  status?: NeedStatus;              // ausente = "abierta"
+  claimedBy?: string | null;       // uid de quien se encargó
+  claimedByName?: string | null;   // nombre/alias verificado
+  claimedAt?: string | null;
+  confirmedBy?: string | null;     // uid del coordinador que confirmó
+  confirmedAt?: string | null;
+  proofUrl?: string | null;        // opcional: foto recibo/entrega (solo URL)
+  reopenedCount?: number;          // historial breve para auditoría
 }
 
 export interface HubLog {

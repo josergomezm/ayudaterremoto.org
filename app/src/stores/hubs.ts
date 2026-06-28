@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authedFetch } from '../lib/authedFetch'
 
+export type NeedStatus = 'abierta' | 'tomada' | 'confirmada'
+
 export interface InventoryItem {
   id: string
   name: string
@@ -9,6 +11,16 @@ export interface InventoryItem {
   quantity: number
   unit: string
   urgency: 'available' | 'low' | 'depleted'
+  // Need lifecycle (WS3)
+  status?: NeedStatus
+  claimedBy?: string | null
+  claimedByName?: string | null
+  claimedAt?: string | null
+  confirmedBy?: string | null
+  confirmedAt?: string | null
+  proofUrl?: string | null
+  reopenedCount?: number
+  staleClaim?: boolean
 }
 
 export interface HubLog {
@@ -194,6 +206,41 @@ export const useHubsStore = defineStore('hubs', () => {
     return r
   }
 
+  // ── Need lifecycle (WS3): abierta → tomada → confirmada ──────────────────
+  function findItem(hubId: string, itemId: string) {
+    return hubs.value.find((h) => h.id === hubId)?.inventory.find((i) => i.id === itemId)
+  }
+
+  async function claimNeed(hubId: string, itemId: string, claimedByName?: string) {
+    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${itemId}/claim`, { method: 'POST' })
+    if (r.ok) {
+      const it = findItem(hubId, itemId)
+      if (it) { it.status = 'tomada'; it.claimedByName = claimedByName ?? null; it.staleClaim = false }
+    }
+    return r
+  }
+
+  async function confirmNeed(hubId: string, itemId: string, proofUrl?: string) {
+    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${itemId}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify(proofUrl ? { proofUrl } : {}),
+    })
+    if (r.ok) {
+      const it = findItem(hubId, itemId)
+      if (it) { it.status = 'confirmada'; it.proofUrl = proofUrl ?? null; it.staleClaim = false }
+    }
+    return r
+  }
+
+  async function reopenNeed(hubId: string, itemId: string) {
+    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${itemId}/reopen`, { method: 'POST' })
+    if (r.ok) {
+      const it = findItem(hubId, itemId)
+      if (it) { it.status = 'abierta'; it.claimedByName = null; it.proofUrl = null; it.staleClaim = false }
+    }
+    return r
+  }
+
   return {
     hubs,
     loading,
@@ -208,5 +255,8 @@ export const useHubsStore = defineStore('hubs', () => {
     fetchLogs,
     addCoordinator,
     removeCoordinator,
+    claimNeed,
+    confirmNeed,
+    reopenNeed,
   }
 })

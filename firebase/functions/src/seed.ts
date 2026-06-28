@@ -38,8 +38,8 @@ export async function seedDemoData(): Promise<void> {
   await batch.commit();
 }
 
-/** Upsert a Command/Authority admin by email. */
-export async function ensureAdmin(email: string, role: AdminRole = "command"): Promise<void> {
+/** Upsert an admin by email. Defaults to Fundador (rol raíz, solo por seed). */
+export async function ensureAdmin(email: string, role: AdminRole = "fundador"): Promise<void> {
   const key = email.toLowerCase();
   await db.doc(`adminUsers/${key}`).set({ email: key, role });
 }
@@ -58,9 +58,9 @@ async function main(): Promise<void> {
 
   if (email) {
     await ensureAdmin(email);
-    console.log(`✓ Command admin set: ${email.toLowerCase()}`);
+    console.log(`✓ Fundador admin set: ${email.toLowerCase()}`);
   } else {
-    console.log("• Tip: create a Command admin with  npm run seed -- you@example.com");
+    console.log("• Tip: create a Fundador admin with  npm run seed -- you@example.com");
   }
   process.exit(0);
 }
