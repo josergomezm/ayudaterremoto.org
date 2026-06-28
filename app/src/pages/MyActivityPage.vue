@@ -50,7 +50,7 @@ const mine = computed<Need[]>(() =>
 
 <style scoped>
 .act { background: var(--screen); min-height: 100%; }
-.wrap { max-width: 560px; margin: 0 auto; padding: 18px 16px 24px; }
+.wrap { margin: 0 auto; padding: 18px 16px 24px; }
 .title { font-size: 22px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; margin: 0; }
 .intro { font-size: 13.5px; font-weight: 500; color: var(--ink2); margin: 4px 0 0; }
 .list { display: flex; flex-direction: column; gap: 13px; margin-top: 16px; }

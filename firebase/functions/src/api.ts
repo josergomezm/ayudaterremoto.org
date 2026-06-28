@@ -216,8 +216,15 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
 
       const ref = db.doc(`responderRequests/${fbUser.email}`);
       if (m === "POST") {
-        const { phone, note } = accessRequestSchema.parse(req.body);
-        const reqDoc: ResponderRequest = { email: fbUser.email, name: fbUser.name, phone, note, requestedAt: new Date().toISOString() };
+        const { phone, note, role } = accessRequestSchema.parse(req.body);
+        const reqDoc: ResponderRequest = {
+          email: fbUser.email,
+          name: fbUser.name,
+          phone,
+          note,
+          requestedRole: role || "coordinador",
+          requestedAt: new Date().toISOString()
+        };
         await ref.set(reqDoc);
         await logAudit({ id: fbUser.email, role: "colaborador", kind: "user" }, "responder_request", { type: "responderRequest", id: fbUser.email });
         return send(200, { status: "pending" });
@@ -244,16 +251,17 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       const reqSnap = await db.doc(`responderRequests/${key}`).get();
       const reqData = reqSnap.exists ? (reqSnap.data() as ResponderRequest) : null;
       const userName = reqData?.name || key;
+      const approvedRole = reqData?.requestedRole || "coordinador";
 
       await db.doc(`users/${key}`).set({
         email: key,
-        role: "coordinador",
+        role: approvedRole,
         name: userName,
         updatedAt: new Date().toISOString()
       });
       await db.doc(`responderRequests/${key}`).delete();
-      await logAudit(actor, "responder_approve", { type: "user", id: key }, { role: "coordinador" });
-      return send(200, { user: { email: key, role: "coordinador" } });
+      await logAudit(actor, "responder_approve", { type: "user", id: key }, { role: approvedRole });
+      return send(200, { user: { email: key, role: approvedRole } });
     }
     if (m === "POST" && path === "/admin/responder-requests/deny") {
       const actor = await getActor(req);
@@ -581,7 +589,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       const actor = await getActor(req);
 
       if (m === "POST" && action === "status") {
-        if (!hasRole(actor, "coordinador")) return send(403, { error: "forbidden" });
+        if (!hasRole(actor, "rescatista")) return send(403, { error: "forbidden" });
         const status = statusSchema.parse(req.body).status;
         const updateData: Partial<Incident> = { status };
         if (status === "red" || status === "yellow") {
@@ -600,7 +608,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         return send(200, { incident: publicIncident({ ...incident, evacuated: true, status: "green" }) });
       }
       if (m === "POST" && action === "resolve") {
-        if (!hasRole(actor, "coordinador")) return send(403, { error: "forbidden" });
+        if (!hasRole(actor, "rescatista")) return send(403, { error: "forbidden" });
         await ref.update({ resolved: true, resolutionConfirmed: null });
         await logAudit(actor, "incident_resolve", { type: "incident", id: seg[1] });
         return send(200, { incident: publicIncident({ ...incident, resolved: true, resolutionConfirmed: null }) });
@@ -649,8 +657,8 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       // Only the original reporter (matched by id) or a responder+ may close it.
       const person = personSnap.data() as MissingPerson;
       const isReporter = actor.id === person.reporterId;
-      if (!isReporter && !hasRole(actor, "coordinador")) {
-        return send(403, { error: "forbidden", message: "Solo el reportante o un coordinador puede marcarla." });
+      if (!isReporter && !hasRole(actor, "rescatista")) {
+        return send(403, { error: "forbidden", message: "Solo el reportante o un rescatista/coordinador puede marcarla." });
       }
       const { byPhone, note } = missingFoundSchema.parse(req.body || {});
       // Finder name comes from the verified identity, not a form field.
@@ -693,7 +701,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     if (m === "POST" && seg[0] === "location-requests" && seg.length === 3 && seg[2] === "resolve") {
       const actor = await getActor(req);
       if (!actor) return send(401, { error: "unauthenticated" });
-      if (!hasRole(actor, "coordinador")) return send(403, { error: "forbidden", message: "Solo coordinadores pueden responder." });
+      if (!hasRole(actor, "rescatista")) return send(403, { error: "forbidden", message: "Solo rescatistas o coordinadores pueden responder." });
 
       const ref = db.doc(`locationRequests/${seg[1]}`);
       const requestSnap = await ref.get();

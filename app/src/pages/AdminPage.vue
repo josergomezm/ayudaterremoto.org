@@ -320,7 +320,12 @@ async function removeAlert(id: string) {
                   </div>
                   <div class="text-xs text-slate-400 mt-1">Solicitado: {{ new Date(r.requestedAt).toLocaleString() }}</div>
                 </div>
-                <span class="rounded bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700 uppercase tracking-wider">Brigadista</span>
+                <span 
+                  class="rounded px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider"
+                  :class="r.requestedRole === 'rescatista' ? 'bg-red-50 text-red-700' : 'bg-indigo-50 text-indigo-700'"
+                >
+                  {{ r.requestedRole === 'rescatista' ? 'Rescatista' : 'Coordinador' }}
+                </span>
               </div>
               <p v-if="r.note" class="text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 italic">
                 “{{ r.note }}”
@@ -367,6 +372,7 @@ async function removeAlert(id: string) {
               <thead class="bg-slate-50 text-xs font-bold text-slate-500 uppercase">
                 <tr>
                   <th class="px-4 py-3">{{ t('admin.colName') }}</th>
+                  <th class="px-4 py-3">Rol</th>
                   <th class="px-4 py-3">{{ t('admin.colEmail') }}</th>
                   <th class="px-4 py-3 text-right">{{ t('admin.colActions') }}</th>
                 </tr>
@@ -374,6 +380,14 @@ async function removeAlert(id: string) {
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="resp in filteredResponders" :key="resp.email" class="hover:bg-slate-50/50">
                   <td class="px-4 py-3 font-medium text-slate-900">{{ resp.name || '—' }}</td>
+                  <td class="px-4 py-3 text-xs">
+                    <span 
+                      class="rounded px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider"
+                      :class="resp.role === 'rescatista' ? 'bg-red-50 text-red-700' : 'bg-indigo-50 text-indigo-700'"
+                    >
+                      {{ resp.role === 'rescatista' ? 'Rescatista' : 'Coordinador' }}
+                    </span>
+                  </td>
                   <td class="px-4 py-3 text-slate-600 font-mono text-xs">{{ resp.email }}</td>
                   <td class="px-4 py-3 text-right">
                     <button

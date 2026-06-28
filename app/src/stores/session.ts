@@ -4,8 +4,8 @@ import { apiFetch } from '../lib/api'
 import { auth, googleProvider } from '../lib/firebase'
 import { signInWithPopup, signOut as fbSignOut, onAuthStateChanged, type User } from 'firebase/auth'
 
-export type Role = 'colaborador' | 'coordinador' | 'organizador' | 'fundador'
-const RANK: Record<Role, number> = { colaborador: 0, coordinador: 1, organizador: 2, fundador: 3 }
+export type Role = 'colaborador' | 'rescatista' | 'coordinador' | 'organizador' | 'fundador'
+const RANK: Record<Role, number> = { colaborador: 0, rescatista: 1, coordinador: 2, organizador: 3, fundador: 4 }
 
 export const useSessionStore = defineStore('session', () => {
   const user = ref<User | null>(null)
@@ -90,7 +90,7 @@ export const useSessionStore = defineStore('session', () => {
     return { ok: false, error: res.error }
   }
 
-  async function requestResponder(phone: string, note: string): Promise<{ ok: boolean; error?: string }> {
+  async function requestResponder(phone: string, note: string, role?: 'rescatista' | 'coordinador'): Promise<{ ok: boolean; error?: string }> {
     const fbUser = auth.currentUser
     if (!fbUser) return { ok: false, error: 'Inicie sesión primero' }
     const token = await fbUser.getIdToken()
@@ -99,7 +99,7 @@ export const useSessionStore = defineStore('session', () => {
       headers: {
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ phone, note }),
+      body: JSON.stringify({ phone, note, role }),
     })
     if (res.ok) return { ok: true }
     return { ok: false, error: res.error }

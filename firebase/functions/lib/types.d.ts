@@ -1,4 +1,4 @@
-export type Role = "colaborador" | "coordinador" | "organizador" | "fundador";
+export type Role = "colaborador" | "rescatista" | "coordinador" | "organizador" | "fundador";
 export type AdminRole = "organizador" | "fundador";
 export type TriageStatus = "green" | "yellow" | "red";
 export type ReportCategory = "medical" | "structural" | "obstruction" | "resource";
@@ -31,6 +31,7 @@ export interface ResponderRequest {
     phone: string;
     note?: string;
     requestedAt: string;
+    requestedRole?: "rescatista" | "coordinador";
 }
 export interface Incident {
     id: string;

@@ -13,6 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.seedDemoData = seedDemoData;
 exports.seedSupplyDemo = seedSupplyDemo;
 exports.ensureAdmin = ensureAdmin;
+exports.main = main;
 const firebase_1 = require("./firebase");
 const v2_1 = require("firebase-functions/v2");
 /** Idempotently seed demo incidents, an alert, and a vouch code. */
@@ -53,8 +54,26 @@ async function seedSupplyDemo() {
     // estos en el emulador para ver la vista "Mi zona".
     await firebase_1.db.doc("users/maria@demo.com").set({ email: "maria@demo.com", role: "coordinador", name: "María González", updatedAt: now });
     await firebase_1.db.doc("users/carlos@demo.com").set({ email: "carlos@demo.com", role: "coordinador", name: "Carlos Pérez", updatedAt: now });
+    await firebase_1.db.doc("users/rescatista@demo.com").set({ email: "rescatista@demo.com", role: "rescatista", name: "Juan Rescate", updatedAt: now });
     // Un Organizador adicional (además del Fundador del seed).
     await firebase_1.db.doc("adminUsers/coordinacion@demo.com").set({ email: "coordinacion@demo.com", role: "organizador" });
+    // Seed pending responder requests (one Coordinator, one Rescuer)
+    await firebase_1.db.doc("responderRequests/solicitud.coordinador@demo.com").set({
+        email: "solicitud.coordinador@demo.com",
+        name: "Ana Suministros",
+        phone: "+58 414 7778899",
+        note: "Coordinadora de la brigada de recolección en Petare.",
+        requestedRole: "coordinador",
+        requestedAt: now
+    });
+    await firebase_1.db.doc("responderRequests/solicitud.rescatista@demo.com").set({
+        email: "solicitud.rescatista@demo.com",
+        name: "Luis Salvamento",
+        phone: "+58 412 9991122",
+        note: "Paramédico y socorrista de Protección Civil.",
+        requestedRole: "rescatista",
+        requestedAt: now
+    });
     const zones = [
         { id: "zona-catia", name: "Refugio Catia La Mar", address: "Av. Soublette, Catia La Mar", lat: 10.5980, lng: -67.0220, createdBy: "maria@demo.com", contactName: "María González" },
         { id: "zona-maiquetia", name: "Punto Maiquetía", address: "Calle Real de Maiquetía", lat: 10.5970, lng: -66.9800, createdBy: "carlos@demo.com", contactName: "Carlos Pérez" },

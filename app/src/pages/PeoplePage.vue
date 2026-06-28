@@ -23,7 +23,7 @@ const toast = useToast()
 const activeTab = ref<'people' | 'patients' | 'buildings'>('people')
 
 const canReport = computed(() => session.isVerified || admin.isAdmin)
-const canResolveBuilding = computed(() => session.can('coordinador') || admin.isAdmin)
+const canResolveBuilding = computed(() => session.can('rescatista') || admin.isAdmin)
 const canImportPatients = computed(() => session.can('coordinador') || admin.isAdmin)
 
 // People Search
@@ -207,12 +207,13 @@ const getAdmittedPatientForMissing = (missingId: string) => {
 }
 
 // Marking found is allowed for the reporter (p.mine) OR a responder/coordinator/admin.
-const canMarkFound = (p: { mine?: boolean }) => admin.isAdmin || session.can('coordinador') || !!p.mine
+const canMarkFound = (p: { mine?: boolean }) => admin.isAdmin || session.can('rescatista') || !!p.mine
 </script>
 
 <template>
-  <div class="mx-auto space-y-5 p-4">
-    <header class="space-y-1">
+  <div class="supply-theme people-page">
+    <div class="wrap space-y-5">
+      <header class="space-y-1">
       <h1 class="text-xl font-bold text-slate-900">{{ t('missing.title') }}</h1>
       <p class="text-sm text-slate-600">{{ t('missing.intro') }}</p>
     </header>
@@ -583,5 +584,76 @@ const canMarkFound = (p: { mine?: boolean }) => admin.isAdmin || session.can('co
         </li>
       </ul>
     </template>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.people-page {
+  background: var(--screen);
+  min-height: 100%;
+  padding-bottom: 40px;
+  color: var(--ink);
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+.wrap {
+  margin: 0 auto;
+  padding: 12px 16px 24px;
+}
+
+/* Custom override classes to apply supply-theme styling */
+:deep(.bg-white) {
+  background-color: var(--card) !important;
+}
+:deep(.ring-slate-200), :deep(.ring-1) {
+  border: 1.5px solid var(--line) !important;
+  --tw-ring-color: transparent !important;
+  box-shadow: none !important;
+}
+:deep(.text-slate-900), :deep(.text-slate-800) {
+  color: var(--ink) !important;
+}
+:deep(.text-slate-700), :deep(.text-slate-600), :deep(.text-slate-500) {
+  color: var(--ink2) !important;
+}
+:deep(.bg-slate-100) {
+  background-color: #ECE7DF !important;
+}
+:deep(.bg-slate-50) {
+  background-color: #F6F4EF !important;
+}
+:deep(.border-slate-300), :deep(.border-indigo-200) {
+  border-color: var(--line) !important;
+}
+:deep(input), :deep(textarea), :deep(select) {
+  border-radius: 12px !important;
+  font-family: inherit !important;
+  outline: none !important;
+}
+:deep(input:focus), :deep(textarea:focus), :deep(select:focus) {
+  border-color: var(--primary) !important;
+}
+:deep(.bg-amber-50) {
+  background-color: var(--amber-bg) !important;
+  color: var(--amber-c) !important;
+  border: 1.5px solid var(--line) !important;
+}
+:deep(.text-amber-900) {
+  color: var(--amber-c) !important;
+}
+:deep(.bg-emerald-50), :deep(.bg-emerald-100) {
+  background-color: var(--green-bg) !important;
+  color: var(--green-c) !important;
+  border: 1.5px solid var(--line) !important;
+}
+:deep(.text-emerald-700), :deep(.text-emerald-800) {
+  color: var(--green-c) !important;
+}
+:deep(.bg-indigo-50), :deep(.bg-indigo-50\/50) {
+  background-color: #F3F6FD !important;
+  border: 1.5px solid var(--line) !important;
+}
+:deep(.text-indigo-950), :deep(.text-indigo-900) {
+  color: var(--primary) !important;
+}
+</style>

@@ -21,6 +21,7 @@ exports.adminEmailSchema = zod_1.z.object({
 exports.accessRequestSchema = zod_1.z.object({
     phone: zod_1.z.string().min(5),
     note: zod_1.z.string().max(500).optional(),
+    role: zod_1.z.enum(["rescatista", "coordinador"]).optional(),
 });
 const categorySchema = zod_1.z.enum(["medical", "structural", "obstruction", "resource"]);
 // Submit a report (personal or proxy).

@@ -19,7 +19,7 @@ const session = useSessionStore()
 const admin = useAdminStore()
 
 // Responders (field) AND coordinators/command (admin) can manage incidents.
-const canManage = computed(() => session.can('coordinador') || admin.isAdmin)
+const canManage = computed(() => session.can('rescatista') || admin.isAdmin)
 
 const id = computed(() => String(route.params.id))
 const incident = computed(() => store.byId(id.value))
@@ -32,8 +32,8 @@ const statuses: TriageStatus[] = ['green', 'yellow', 'red']
 </script>
 
 <template>
-  <div v-if="incident" class="mx-auto">
-    <div class="space-y-4 p-4">
+  <div class="supply-theme detail-page">
+    <div v-if="incident" class="wrap space-y-4">
       <button class="flex items-center gap-1 text-sm font-semibold text-slate-500" @click="router.back()">
         <MaterialIcon name="arrow_back" :size="18" /> {{ t('common.back') }}
       </button>
@@ -154,9 +154,62 @@ const statuses: TriageStatus[] = ['green', 'yellow', 'red']
       </p>
       <p v-else-if="incident.resolved" class="text-sm text-slate-500">{{ t('detail.resolvedPending') }}</p>
     </div>
-  </div>
 
   <div v-else class="p-8 text-center text-slate-500">
     {{ t('detail.notFound') }}
   </div>
+</div>
 </template>
+
+<style scoped>
+.detail-page {
+  background: var(--screen);
+  min-height: 100%;
+  padding-bottom: 40px;
+  color: var(--ink);
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+.wrap {
+  margin: 0 auto;
+  padding: 12px 16px 24px;
+}
+
+/* Custom overrides to apply supply-theme styles to child elements */
+:deep(.bg-white) {
+  background-color: var(--card) !important;
+}
+:deep(.bg-slate-50) {
+  background-color: #F6F4EF !important;
+  border: 1.5px solid var(--line) !important;
+}
+:deep(.ring-slate-200), :deep(.ring-1) {
+  border: 1.5px solid var(--line) !important;
+  --tw-ring-color: transparent !important;
+  box-shadow: none !important;
+}
+:deep(.text-slate-900), :deep(.text-slate-800) {
+  color: var(--ink) !important;
+}
+:deep(.text-slate-700), :deep(.text-slate-600), :deep(.text-slate-500) {
+  color: var(--ink2) !important;
+}
+:deep(.border-slate-200) {
+  border-color: var(--line) !important;
+}
+:deep(.bg-amber-50) {
+  background-color: var(--amber-bg) !important;
+  color: var(--amber-c) !important;
+  border: 1.5px solid var(--line) !important;
+}
+:deep(.text-amber-900) {
+  color: var(--amber-c) !important;
+}
+:deep(.bg-fuchsia-50) {
+  background-color: #FCEDEA !important;
+  color: #B42318 !important;
+  border: 1.5px solid var(--line) !important;
+}
+:deep(.text-fuchsia-900) {
+  color: #B42318 !important;
+}
+</style>

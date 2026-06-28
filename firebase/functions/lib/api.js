@@ -197,8 +197,15 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
             }
             const ref = firebase_1.db.doc(`responderRequests/${fbUser.email}`);
             if (m === "POST") {
-                const { phone, note } = models_1.accessRequestSchema.parse(req.body);
-                const reqDoc = { email: fbUser.email, name: fbUser.name, phone, note, requestedAt: new Date().toISOString() };
+                const { phone, note, role } = models_1.accessRequestSchema.parse(req.body);
+                const reqDoc = {
+                    email: fbUser.email,
+                    name: fbUser.name,
+                    phone,
+                    note,
+                    requestedRole: role || "coordinador",
+                    requestedAt: new Date().toISOString()
+                };
                 await ref.set(reqDoc);
                 await (0, audit_1.logAudit)({ id: fbUser.email, role: "colaborador", kind: "user" }, "responder_request", { type: "responderRequest", id: fbUser.email });
                 return send(200, { status: "pending" });
@@ -225,15 +232,16 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
             const reqSnap = await firebase_1.db.doc(`responderRequests/${key}`).get();
             const reqData = reqSnap.exists ? reqSnap.data() : null;
             const userName = reqData?.name || key;
+            const approvedRole = reqData?.requestedRole || "coordinador";
             await firebase_1.db.doc(`users/${key}`).set({
                 email: key,
-                role: "coordinador",
+                role: approvedRole,
                 name: userName,
                 updatedAt: new Date().toISOString()
             });
             await firebase_1.db.doc(`responderRequests/${key}`).delete();
-            await (0, audit_1.logAudit)(actor, "responder_approve", { type: "user", id: key }, { role: "coordinador" });
-            return send(200, { user: { email: key, role: "coordinador" } });
+            await (0, audit_1.logAudit)(actor, "responder_approve", { type: "user", id: key }, { role: approvedRole });
+            return send(200, { user: { email: key, role: approvedRole } });
         }
         if (m === "POST" && path === "/admin/responder-requests/deny") {
             const actor = await (0, auth_1.getActor)(req);
@@ -555,7 +563,7 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
             const action = seg[2];
             const actor = await (0, auth_1.getActor)(req);
             if (m === "POST" && action === "status") {
-                if (!(0, auth_1.hasRole)(actor, "coordinador"))
+                if (!(0, auth_1.hasRole)(actor, "rescatista"))
                     return send(403, { error: "forbidden" });
                 const status = models_1.statusSchema.parse(req.body).status;
                 const updateData = { status };
@@ -576,7 +584,7 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
                 return send(200, { incident: publicIncident({ ...incident, evacuated: true, status: "green" }) });
             }
             if (m === "POST" && action === "resolve") {
-                if (!(0, auth_1.hasRole)(actor, "coordinador"))
+                if (!(0, auth_1.hasRole)(actor, "rescatista"))
                     return send(403, { error: "forbidden" });
                 await ref.update({ resolved: true, resolutionConfirmed: null });
                 await (0, audit_1.logAudit)(actor, "incident_resolve", { type: "incident", id: seg[1] });
@@ -629,8 +637,8 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
             // Only the original reporter (matched by id) or a responder+ may close it.
             const person = personSnap.data();
             const isReporter = actor.id === person.reporterId;
-            if (!isReporter && !(0, auth_1.hasRole)(actor, "coordinador")) {
-                return send(403, { error: "forbidden", message: "Solo el reportante o un coordinador puede marcarla." });
+            if (!isReporter && !(0, auth_1.hasRole)(actor, "rescatista")) {
+                return send(403, { error: "forbidden", message: "Solo el reportante o un rescatista/coordinador puede marcarla." });
             }
             const { byPhone, note } = models_1.missingFoundSchema.parse(req.body || {});
             // Finder name comes from the verified identity, not a form field.
@@ -674,8 +682,8 @@ exports.api = (0, https_1.onRequest)({ region: "us-central1", maxInstances: 10, 
             const actor = await (0, auth_1.getActor)(req);
             if (!actor)
                 return send(401, { error: "unauthenticated" });
-            if (!(0, auth_1.hasRole)(actor, "coordinador"))
-                return send(403, { error: "forbidden", message: "Solo coordinadores pueden responder." });
+            if (!(0, auth_1.hasRole)(actor, "rescatista"))
+                return send(403, { error: "forbidden", message: "Solo rescatistas o coordinadores pueden responder." });
             const ref = firebase_1.db.doc(`locationRequests/${seg[1]}`);
             const requestSnap = await ref.get();
             if (!requestSnap.exists)

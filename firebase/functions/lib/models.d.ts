@@ -29,12 +29,15 @@ export declare const adminEmailSchema: z.ZodObject<{
 export declare const accessRequestSchema: z.ZodObject<{
     phone: z.ZodString;
     note: z.ZodOptional<z.ZodString>;
+    role: z.ZodOptional<z.ZodEnum<["rescatista", "coordinador"]>>;
 }, "strip", z.ZodTypeAny, {
     phone: string;
     note?: string | undefined;
+    role?: "rescatista" | "coordinador" | undefined;
 }, {
     phone: string;
     note?: string | undefined;
+    role?: "rescatista" | "coordinador" | undefined;
 }>;
 export declare const reportSchema: z.ZodObject<{
     type: z.ZodEnum<["personal", "proxy"]>;

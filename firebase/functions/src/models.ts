@@ -25,6 +25,7 @@ export const adminEmailSchema = z.object({
 export const accessRequestSchema = z.object({
   phone: z.string().min(5),
   note: z.string().max(500).optional(),
+  role: z.enum(["rescatista", "coordinador"]).optional(),
 });
 
 const categorySchema = z.enum(["medical", "structural", "obstruction", "resource"]);

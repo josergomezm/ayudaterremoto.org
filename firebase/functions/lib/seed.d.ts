@@ -9,3 +9,4 @@ export declare function seedDemoData(): Promise<void>;
 export declare function seedSupplyDemo(): Promise<void>;
 /** Upsert an admin by email. Defaults to Fundador (rol raíz, solo por seed). */
 export declare function ensureAdmin(email: string, role?: AdminRole): Promise<void>;
+export declare function main(): Promise<void>;

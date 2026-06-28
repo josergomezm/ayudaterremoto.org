@@ -11,6 +11,7 @@ import { useOnline } from '../composables/useOnline'
 import MaterialIcon from '../components/MaterialIcon.vue'
 import NeedCard from '../components/NeedCard.vue'
 import Loader from '../components/Loader.vue'
+import IncidentMap from '../components/IncidentMap.vue'
 
 const { t } = useI18n()
 const hubs = useHubsStore()
@@ -173,10 +174,9 @@ function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value
           <MaterialIcon name="wifi_off" :size="19" /> {{ t('home.offline') }}
         </div>
 
-        <!-- Map placeholder (Fase B) -->
-        <div v-if="view === 'map'" class="map-ph">
-          <MaterialIcon name="map" :size="40" />
-          <p>{{ t('home.mapSoon') }}</p>
+        <!-- Interactive Map of Supply Zones -->
+        <div v-if="view === 'map'" class="mt-3.5">
+          <IncidentMap :hubs="hubs.activeHubs" :incidents="[]" />
         </div>
 
         <!-- Lista -->
@@ -207,7 +207,7 @@ function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value
 
 <style scoped>
 .home { background: var(--screen); min-height: 100%; }
-.wrap { max-width: 560px; margin: 0 auto; padding: 12px 16px 24px; display: flex; flex-direction: column; }
+.wrap { margin: 0 auto; padding: 12px 16px 24px; display: flex; flex-direction: column; }
 .scroll-x::-webkit-scrollbar { display: none; }
 .muted { font-size: 14px; color: var(--ink2); font-style: italic; padding: 8px 2px; }
 

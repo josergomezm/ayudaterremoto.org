@@ -5,7 +5,7 @@ const es = {
   slide1: {
     label: 'Paso 1 de 4',
     heading: 'Aquí coordinamos la ayuda',
-    body: 'Ayuda Terremoto conecta a personas afectadas con voluntarios y brigadas. Puedes reportar emergencias, buscar personas desaparecidas y ver qué está pasando en tu zona, incluso sin conexión.',
+    body: 'Ayuda Terremoto conecta a personas afectadas con voluntarios and brigadas. Puedes reportar emergencias, buscar personas desaparecidas y ver qué está pasando en tu zona, incluso sin conexión.',
   },
   slide2: {
     label: 'Paso 2 de 4',
@@ -20,10 +20,10 @@ const es = {
   },
   slide3_hubs: {
     label: 'Paso 3 de 4',
-    heading: 'Zonas de Acopio y Alivio',
-    body: 'Hemos habilitado un mapa y listado de zonas donde se distribuye agua, comida, herramientas y refugio. Cualquiera puede ver la disponibilidad y urgencia en tiempo real para donar o solicitar ayuda.',
+    heading: 'Centros de Suministro',
+    body: 'Hemos habilitado un mapa y listado de centros donde se distribuye agua, comida, herramientas y refugio. Cualquiera puede ver la disponibilidad y urgencia en tiempo real para donar o solicitar ayuda.',
     coordTitle: 'Ayuda con la coordinación',
-    coordBody: '¿Quieres coordinar o gestionar el inventario de una zona? Solicita acceso para unirte a nuestros grupos de trabajo de WhatsApp.',
+    coordBody: '¿Quieres coordinar o gestionar el inventario de un centro? Solicita acceso para unirte a nuestros grupos de trabajo de WhatsApp.',
     coordCta: 'Contactar Coordinación en WhatsApp',
   },
   slide3: {
@@ -41,11 +41,11 @@ const es = {
       },
       coordinador: {
         name: 'Coordinador',
-        desc: 'Te dieron un código de aval. Puedes actualizar estados y gestionar tu zona.',
+        desc: 'Te dieron un código de aval. Puedes actualizar estados y gestionar tu centro.',
       },
       organizador: {
         name: 'Organizador',
-        desc: 'Coordinas la operación: creas zonas, asignas coordinadores, transmites avisos y revisas reportes.',
+        desc: 'Coordinas la operación: creas centros, asignas coordinadores, transmites avisos y revisas reportes.',
       },
       fundador: {
         name: 'Fundador',
@@ -80,10 +80,10 @@ const en: typeof es = {
   },
   slide3_hubs: {
     label: 'Step 3 of 4',
-    heading: 'Relief Zones',
-    body: 'We have enabled a map layer and directory of zones distributing water, food, tools, and shelter. Anyone can see real-time availability and urgency to donate or request aid.',
+    heading: 'Supply Centers',
+    body: 'We have enabled a map layer and directory of supply centers distributing water, food, tools, and shelter. Anyone can see real-time availability and urgency to donate or request aid.',
     coordTitle: 'Help with coordination',
-    coordBody: 'Do you want to coordinate or manage a zone\'s inventory? Request access to join our WhatsApp working groups.',
+    coordBody: 'Do you want to coordinate or manage a center\'s inventory? Request access to join our WhatsApp working groups.',
     coordCta: 'Contact Coordination on WhatsApp',
   },
   slide3: {
@@ -101,11 +101,11 @@ const en: typeof es = {
       },
       coordinador: {
         name: 'Coordinator',
-        desc: 'You were given a vouch code. You can update statuses and manage your zone.',
+        desc: 'You were given a vouch code. You can update statuses and manage your center.',
       },
       organizador: {
         name: 'Organizer',
-        desc: 'You run the operation: create zones, assign coordinators, broadcast notices, and review reports.',
+        desc: 'You run the operation: create centers, assign coordinators, broadcast notices, and review reports.',
       },
       fundador: {
         name: 'Founder',

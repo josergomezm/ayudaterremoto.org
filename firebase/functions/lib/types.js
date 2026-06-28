@@ -4,5 +4,5 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ROLE_RANK = void 0;
 exports.ROLE_RANK = {
-    colaborador: 0, coordinador: 1, organizador: 2, fundador: 3,
+    colaborador: 0, rescatista: 1, coordinador: 2, organizador: 3, fundador: 4,
 };

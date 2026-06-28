@@ -8,7 +8,7 @@ import type { Role } from './session'
 export interface AuditEntry { voucher: string; voucheeDni: string; timestamp: string }
 export interface AdminUser { email: string; role: 'organizador' | 'fundador' }
 export interface AccessRequest { email: string; name: string; phone: string; note?: string; requestedAt: string }
-export interface ResponderRequest { email: string; name: string; phone: string; note?: string; requestedAt: string }
+export interface ResponderRequest { email: string; name: string; phone: string; note?: string; requestedAt: string; requestedRole?: 'rescatista' | 'coordinador' }
 export interface Responder { email: string; name?: string; role: string; updatedAt?: string }
 export interface AuditLogEntry {
   action: string
