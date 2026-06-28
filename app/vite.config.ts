@@ -8,4 +8,10 @@ export default defineConfig({
   // paths are required or the native build 404s on every chunk.
   base: './',
   build: { outDir: 'dist' },
+  server: {
+    host: true,
+    // Acepta cualquier host (incluye túneles ngrok: .ngrok-free.dev, .ngrok-free.app, etc.)
+    // sin el error "Blocked request. This host is not allowed." Solo dev local.
+    allowedHosts: true,
+  },
 })

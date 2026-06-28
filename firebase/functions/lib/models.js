@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hubCoordinatorSchema = exports.inventoryAdjustSchema = exports.inventoryUpsertSchema = exports.hubUpdateSchema = exports.hubCreateSchema = exports.hospitalInputSchema = exports.admittedPatientSchema = exports.locationResolveSchema = exports.locationRequestSchema = exports.missingFoundSchema = exports.missingPersonSchema = exports.announcementSchema = exports.resolutionConfirmSchema = exports.statusSchema = exports.reportSchema = exports.accessRequestSchema = exports.adminEmailSchema = exports.adminUserSchema = exports.echoSchema = void 0;
+exports.needConfirmSchema = exports.hubCoordinatorSchema = exports.inventoryAdjustSchema = exports.inventoryUpsertSchema = exports.hubUpdateSchema = exports.hubCreateSchema = exports.hospitalInputSchema = exports.admittedPatientSchema = exports.locationResolveSchema = exports.locationRequestSchema = exports.missingFoundSchema = exports.missingPersonSchema = exports.announcementSchema = exports.resolutionConfirmSchema = exports.statusSchema = exports.reportSchema = exports.accessRequestSchema = exports.adminEmailSchema = exports.adminUserSchema = exports.echoSchema = void 0;
 const zod_1 = require("zod");
 // One zod schema per endpoint body. Add new endpoints' schemas here, then a
 // matching route branch in api.ts (see README "How to add an API endpoint").
@@ -12,7 +12,7 @@ exports.echoSchema = zod_1.z.object({
 // Admin-role management (Command only):
 exports.adminUserSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
-    role: zod_1.z.enum(["authority", "command", "sudo"]),
+    role: zod_1.z.enum(["organizador", "fundador"]),
 });
 exports.adminEmailSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
@@ -126,4 +126,8 @@ exports.inventoryAdjustSchema = zod_1.z.object({
 });
 exports.hubCoordinatorSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
+});
+// Confirmar una necesidad (Workstream 3) — proofUrl opcional (solo un enlace).
+exports.needConfirmSchema = zod_1.z.object({
+    proofUrl: zod_1.z.string().url().optional(),
 });

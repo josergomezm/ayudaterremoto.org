@@ -29,8 +29,8 @@ async function getActor(req) {
                 const role = userSnap.data().role;
                 return { role, kind: "field", id: email, name: decoded.name ?? email };
             }
-            // 3. Default to civilian for other Google users
-            return { role: "civilian", kind: "field", id: email, name: decoded.name ?? email };
+            // 3. Default to colaborador for other Google users
+            return { role: "colaborador", kind: "field", id: email, name: decoded.name ?? email };
         }
         return null;
     }

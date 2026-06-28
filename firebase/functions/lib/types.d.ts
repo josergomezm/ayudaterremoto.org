@@ -1,5 +1,5 @@
-export type Role = "civilian" | "responder" | "authority" | "command" | "sudo";
-export type AdminRole = "authority" | "command" | "sudo";
+export type Role = "colaborador" | "coordinador" | "organizador" | "fundador";
+export type AdminRole = "organizador" | "fundador";
 export type TriageStatus = "green" | "yellow" | "red";
 export type ReportCategory = "medical" | "structural" | "obstruction" | "resource";
 export declare const ROLE_RANK: Record<Role, number>;
@@ -129,6 +129,7 @@ export type HubStatus = "active" | "closed";
 export type InventoryCategory = "water" | "food" | "tools" | "medical" | "shelter" | "clothing" | "hygiene" | "other";
 export type InventoryUrgency = "available" | "low" | "depleted";
 export type HubLogAction = "restock" | "distribute" | "adjust" | "note";
+export type NeedStatus = "abierta" | "tomada" | "confirmada";
 export interface ResourceHub {
     id: string;
     name: string;
@@ -151,6 +152,16 @@ export interface InventoryItem {
     unit: string;
     urgency: InventoryUrgency;
     updatedAt: string;
+    status?: NeedStatus;
+    claimedBy?: string | null;
+    claimedByName?: string | null;
+    claimedAt?: string | null;
+    confirmedBy?: string | null;
+    confirmedByName?: string | null;
+    confirmedAt?: string | null;
+    proofUrl?: string | null;
+    reopenedCount?: number;
+    reopenedByName?: string | null;
 }
 export interface HubLog {
     id: string;

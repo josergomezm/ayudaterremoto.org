@@ -4,5 +4,5 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ROLE_RANK = void 0;
 exports.ROLE_RANK = {
-    civilian: 0, responder: 1, authority: 2, command: 3, sudo: 4,
+    colaborador: 0, coordinador: 1, organizador: 2, fundador: 3,
 };

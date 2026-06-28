@@ -11,12 +11,12 @@ export declare const echoSchema: z.ZodObject<{
 }>;
 export declare const adminUserSchema: z.ZodObject<{
     email: z.ZodString;
-    role: z.ZodEnum<["authority", "command", "sudo"]>;
+    role: z.ZodEnum<["organizador", "fundador"]>;
 }, "strip", z.ZodTypeAny, {
-    role: "authority" | "command" | "sudo";
+    role: "organizador" | "fundador";
     email: string;
 }, {
-    role: "authority" | "command" | "sudo";
+    role: "organizador" | "fundador";
     email: string;
 }>;
 export declare const adminEmailSchema: z.ZodObject<{
@@ -299,4 +299,11 @@ export declare const hubCoordinatorSchema: z.ZodObject<{
     email: string;
 }, {
     email: string;
+}>;
+export declare const needConfirmSchema: z.ZodObject<{
+    proofUrl: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    proofUrl?: string | undefined;
+}, {
+    proofUrl?: string | undefined;
 }>;
