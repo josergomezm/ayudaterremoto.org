@@ -17,10 +17,14 @@ export interface InventoryItem {
   claimedByName?: string | null
   claimedAt?: string | null
   confirmedBy?: string | null
+  confirmedByName?: string | null
   confirmedAt?: string | null
   proofUrl?: string | null
   reopenedCount?: number
+  reopenedByName?: string | null
   staleClaim?: boolean
+  mineClaim?: boolean
+  mineConfirm?: boolean
 }
 
 export interface HubLog {

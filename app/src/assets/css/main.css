@@ -26,3 +26,21 @@ body {
 
 /* Large default tap targets — users may be stressed, injured, on cracked screens. */
 button { touch-action: manipulation; }
+
+/* ── Supply redesign theme (WS5) ──────────────────────────────────────────
+   Tokens del handoff de Claude Design (docs/design/Home-Suministros.dc.html).
+   Se aplican con la clase .supply-theme para no alterar el resto de la app. */
+.supply-theme {
+  --screen: #F7F5F1;
+  --card: #ffffff;
+  --line: #E7E2D9;
+  --ink: #211F1B;
+  --ink2: #6F685C;
+  --primary: #2350C9;
+  --primary-d: #1B3FA3;
+  --red-c: #B42318;  --red-bg: #FCEDEA;  --red-dot: #E03A2B;
+  --amber-c: #B54708; --amber-bg: #FCF1E1; --amber-dot: #F18C12;
+  --green-c: #15794B; --green-bg: #E9F6EE; --green-dot: #16A866;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: var(--ink);
+}

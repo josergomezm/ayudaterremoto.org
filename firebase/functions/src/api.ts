@@ -844,6 +844,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
 
     // ── Resource Hubs / "zonas" (public read; Coordinador create + manage own; Organizador oversees & assigns) ──
     if (m === "GET" && path === "/hubs") {
+      const viewer = await getActor(req); // puede ser null (lectura pública)
       const q = await db.collection("resourceHubs").where("status", "==", "active").get();
       const hubs = [];
       for (const d of q.docs) {
@@ -854,7 +855,11 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
           const status = it.status ?? "abierta";
           const staleClaim = status === "tomada" && !!it.claimedAt &&
             (Date.now() - new Date(it.claimedAt).getTime() > NEED_STALE_MS);
-          return { ...it, status, staleClaim };
+          // No exponer emails (claimedBy/confirmedBy); en su lugar, flags "mine".
+          const { claimedBy, confirmedBy, ...pub } = it;
+          const mineClaim = !!viewer && !!claimedBy && viewer.id === claimedBy;
+          const mineConfirm = !!viewer && !!confirmedBy && viewer.id === confirmedBy;
+          return { ...pub, status, staleClaim, mineClaim, mineConfirm };
         });
         const logSnap = await db.collection(`resourceHubs/${hub.id}/logs`).orderBy("timestamp", "desc").limit(5).get();
         const recentLogs = logSnap.docs.map((lg) => lg.data() as HubLog);
@@ -1065,7 +1070,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         // El que se encargó no confirma: el coordinador es la única fuente de verdad.
         if (item.claimedBy && item.claimedBy === actor.id) return send(400, { error: "claimer_cannot_confirm", message: "Quien se encargó no puede confirmar su propia entrega." });
         const { proofUrl } = needConfirmSchema.parse(req.body ?? {});
-        await itemRef.update({ status: "confirmada", confirmedBy: actor.id, confirmedAt: now, proofUrl: proofUrl ?? null, updatedAt: now });
+        await itemRef.update({ status: "confirmada", confirmedBy: actor.id, confirmedByName: actor.name ?? actor.id, confirmedAt: now, proofUrl: proofUrl ?? null, updatedAt: now });
         await logAudit(actor, "need_confirm", { type: "inventoryItem", id: needId }, { hubId });
         return send(200, { ok: true, status: "confirmada" });
       }
@@ -1076,8 +1081,9 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         await itemRef.update({
           status: "abierta",
           claimedBy: null, claimedByName: null, claimedAt: null,
-          confirmedBy: null, confirmedAt: null, proofUrl: null,
+          confirmedBy: null, confirmedByName: null, confirmedAt: null, proofUrl: null,
           reopenedCount: (item.reopenedCount ?? 0) + 1,
+          reopenedByName: actor.name ?? actor.id,
           updatedAt: now,
         });
         await logAudit(actor, "need_reopen", { type: "inventoryItem", id: needId }, { hubId });

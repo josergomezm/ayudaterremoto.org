@@ -7,12 +7,14 @@ import OfflineBanner from './OfflineBanner.vue'
 import MaterialIcon from './MaterialIcon.vue'
 import ToastHost from './ToastHost.vue'
 import { useSessionStore } from '../stores/session'
+import { useAdminStore } from '../stores/admin'
 import { useIncidentsStore } from '../stores/incidents'
 import logoUrl from '../assets/logo.svg'
 
 const { t } = useI18n()
 const route = useRoute()
 const session = useSessionStore()
+const admin = useAdminStore()
 const incidents = useIncidentsStore()
 
 onMounted(() => incidents.refreshPending())
@@ -20,9 +22,22 @@ onMounted(() => incidents.refreshPending())
 const roleLabel = computed(() => t('roles.' + (session.role ?? 'unverified')))
 
 // Material Symbols icon names (https://fonts.google.com/icons).
-// WS4: SAR desconectado — fuera "map" (incidentes), "report" y "people".
-const nav = [
+// WS5: bottom-tab del rediseño — Necesidades / Zonas / Mi actividad / Organizar.
+// "Organizar" (→ /admin) solo para Organizador+.
+const tabs = computed(() => {
+  const list = [
+    { name: 'needs', to: '/', label: 'shell.nav.needs', icon: 'inventory_2' },
+    { name: 'hubs', to: '/hubs', label: 'shell.nav.hubs', icon: 'location_on' },
+    { name: 'activity', to: '/me', label: 'shell.nav.activity', icon: 'person' },
+  ]
+  if (admin.isAdmin) list.push({ name: 'organize', to: '/admin', label: 'shell.nav.organize', icon: 'admin_panel_settings' })
+  return list
+})
+// Sidebar de escritorio: set completo (Alertas/Guías/Acerca siguen accesibles aquí).
+const sideNav = [
+  { name: 'needs', to: '/', label: 'shell.nav.needs', icon: 'inventory_2' },
   { name: 'hubs', to: '/hubs', label: 'shell.nav.hubs', icon: 'warehouse' },
+  { name: 'activity', to: '/me', label: 'shell.nav.activity', icon: 'person' },
   { name: 'alerts', to: '/alerts', label: 'shell.nav.alerts', icon: 'campaign' },
   { name: 'guides', to: '/guides', label: 'shell.nav.guides', icon: 'menu_book' },
   { name: 'about', to: '/about', label: 'shell.nav.about', icon: 'info' },
@@ -49,7 +64,7 @@ function isActive(to: string): boolean {
 
       <nav class="flex-1 space-y-1 px-3">
         <RouterLink
-          v-for="item in nav"
+          v-for="item in sideNav"
           :key="item.name"
           :to="item.to"
           class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors"
@@ -107,18 +122,20 @@ function isActive(to: string): boolean {
 
       <ToastHost />
 
-      <!-- ── MOBILE BOTTOM NAV (below md) ───────────────────────────── -->
-      <nav class="fixed bottom-0 left-0 right-0 z-50 pb-safe border-t border-slate-200 bg-white md:hidden">
-        <div class="grid grid-cols-4">
+      <!-- ── MOBILE BOTTOM NAV (below md) · rediseño WS5 ─────────────── -->
+      <nav
+        class="fixed bottom-0 left-0 right-0 z-50 pb-safe md:hidden"
+        style="background:#fff;border-top:1px solid #E7E2D9;font-family:'Plus Jakarta Sans',system-ui,sans-serif;"
+      >
+        <div class="flex justify-around" style="padding:10px 8px 12px;">
           <RouterLink
-            v-for="item in nav"
+            v-for="item in tabs"
             :key="item.name"
             :to="item.to"
-            class="flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium"
-            :class="isActive(item.to) ? 'text-slate-900' : 'text-slate-400'"
+            class="flex flex-col items-center gap-0.5 no-underline"
           >
-            <MaterialIcon :name="item.icon" :size="24" />
-            {{ t(item.label) }}
+            <MaterialIcon :name="item.icon" :size="25" :fill="isActive(item.to)" :style="{ color: isActive(item.to) ? '#2350C9' : '#6F685C' }" />
+            <span :style="{ fontSize: '10.5px', fontWeight: isActive(item.to) ? 800 : 700, color: isActive(item.to) ? '#2350C9' : '#6F685C' }">{{ t(item.label) }}</span>
           </RouterLink>
         </div>
       </nav>

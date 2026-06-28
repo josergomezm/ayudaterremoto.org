@@ -6,8 +6,9 @@ const router = createRouter({
   routes: [
     // WS4: el motor SAR (incidentes / reportes / desaparecidos) queda desconectado
     // del cliente. El backend se conserva intacto y el código vive en la rama
-    // parked/sar-engine. Home interino → Zonas (el WS5 rediseña el Home).
-    { path: '/', redirect: '/hubs' },
+    // parked/sar-engine. WS5: el Home es la lista de necesidades (NeedsHomePage).
+    { path: '/', name: 'home', component: () => import('../pages/NeedsHomePage.vue') },
+    { path: '/me', name: 'my-activity', component: () => import('../pages/MyActivityPage.vue') },
     { path: '/verify', name: 'verify', component: () => import('../pages/VerifyPage.vue') },
     { path: '/alerts', name: 'alerts', component: () => import('../pages/AnnouncementsPage.vue') },
     { path: '/guides', name: 'guides', component: () => import('../pages/GuidesPage.vue') },

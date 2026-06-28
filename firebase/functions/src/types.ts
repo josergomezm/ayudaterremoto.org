@@ -174,9 +174,11 @@ export interface InventoryItem {
   claimedByName?: string | null;   // nombre/alias verificado
   claimedAt?: string | null;
   confirmedBy?: string | null;     // uid del coordinador que confirmó
+  confirmedByName?: string | null; // nombre del coordinador (para "Confirmada por …")
   confirmedAt?: string | null;
   proofUrl?: string | null;        // opcional: foto recibo/entrega (solo URL)
   reopenedCount?: number;          // historial breve para auditoría
+  reopenedByName?: string | null;  // nombre de quien reabrió (para "Reabierta por …")
 }
 
 export interface HubLog {

@@ -21,6 +21,7 @@ import guides from './locales/pages/guides'
 import missing from './locales/pages/missing'
 import admin from './locales/pages/admin'
 import hubs from './locales/pages/hubs'
+import home from './locales/pages/home'
 import notFound from './locales/pages/notFound'
 
 // Spanish (primary, Venezuela) first; English is the fallback.
@@ -49,6 +50,7 @@ const messages = {
     missing: missing.es,
     admin: admin.es,
     hubs: hubs.es,
+    home: home.es,
     notFound: notFound.es,
   },
   en: {
@@ -70,6 +72,7 @@ const messages = {
     missing: missing.en,
     admin: admin.en,
     hubs: hubs.en,
+    home: home.en,
     notFound: notFound.en,
   },
 }
