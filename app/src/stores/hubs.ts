@@ -25,6 +25,7 @@ export interface InventoryItem {
   staleClaim?: boolean
   mineClaim?: boolean
   mineConfirm?: boolean
+  eta?: string | null
 }
 
 export interface HubLog {
@@ -215,11 +216,19 @@ export const useHubsStore = defineStore('hubs', () => {
     return hubs.value.find((h) => h.id === hubId)?.inventory.find((i) => i.id === itemId)
   }
 
-  async function claimNeed(hubId: string, itemId: string, claimedByName?: string) {
-    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${itemId}/claim`, { method: 'POST' })
+  async function claimNeed(hubId: string, itemId: string, claimedByName?: string, eta?: string) {
+    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${itemId}/claim`, {
+      method: 'POST',
+      body: JSON.stringify({ eta }),
+    })
     if (r.ok) {
       const it = findItem(hubId, itemId)
-      if (it) { it.status = 'tomada'; it.claimedByName = claimedByName ?? null; it.staleClaim = false }
+      if (it) {
+        it.status = 'tomada'
+        it.claimedByName = claimedByName ?? null
+        it.eta = eta ?? null
+        it.staleClaim = false
+      }
     }
     return r
   }

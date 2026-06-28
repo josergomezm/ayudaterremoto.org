@@ -46,7 +46,9 @@ function whatsapp() {
 }
 async function claim() {
   if (props.offline) return
-  const r = await hubs.claimNeed(props.hub.id, props.item.id, session.name ?? undefined)
+  const eta = window.prompt(t('home.promptEta'), '2 horas')
+  if (eta === null) return // User cancelled
+  const r = await hubs.claimNeed(props.hub.id, props.item.id, session.name ?? undefined, eta || undefined)
   if (r.ok) toast.success(t('home.needClaimed')); else toast.error(r.error || t('common.error'))
 }
 async function confirm() {
@@ -89,9 +91,15 @@ async function close() {
     </div>
 
     <!-- Nota de estado -->
-    <div v-if="state === 'tomada'" class="nc-note">
-      <MaterialIcon :name="mode === 'coordinador' ? 'local_shipping' : 'person'" :size="18" />
-      <span>{{ mode === 'coordinador' ? t('home.inTransit') : t('home.someoneHandling') }} · <b>{{ claimer }}</b></span>
+    <div v-if="state === 'tomada'" class="nc-note flex-col items-start gap-1.5">
+      <div class="flex items-center gap-2">
+        <MaterialIcon :name="mode === 'coordinador' ? 'local_shipping' : 'person'" :size="18" />
+        <span>{{ mode === 'coordinador' ? t('home.inTransit') : t('home.someoneHandling') }} · <b>{{ claimer }}</b></span>
+      </div>
+      <div v-if="item.eta" class="text-xs text-[var(--amber-c)] bg-[var(--amber-bg)] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 mt-0.5">
+        <MaterialIcon name="schedule" :size="14" />
+        <span>ETA: {{ item.eta }}</span>
+      </div>
     </div>
     <div v-else-if="state === 'confirmada'" class="nc-note nc-note--green">
       <MaterialIcon name="verified" :size="18" />

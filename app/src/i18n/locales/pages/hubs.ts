@@ -91,6 +91,7 @@ const es = {
   needClaimed: '¡Te encargaste de esta necesidad!',
   needConfirmed: 'Llegada confirmada.',
   needReopened: 'Necesidad reabierta.',
+  promptEta: '¿Cuándo estimas entregar esta ayuda? (Ej: 2 horas, Esta tarde, Mañana)',
 }
 
 const en: typeof es = {
@@ -186,6 +187,7 @@ const en: typeof es = {
   needClaimed: 'You took on this need!',
   needConfirmed: 'Arrival confirmed.',
   needReopened: 'Need reopened.',
+  promptEta: 'When do you estimate delivering this supply? (E.g., 2 hours, This afternoon, Tomorrow)',
 }
 
 export default { es, en }

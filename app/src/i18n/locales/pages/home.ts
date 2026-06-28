@@ -16,6 +16,7 @@ const es = {
   needClaimed: '¡Te encargaste de esta necesidad!',
   needConfirmed: 'Llegada confirmada.',
   needReopened: 'Necesidad reabierta.',
+  promptEta: '¿Cuándo estimas entregar esta ayuda? (Ej: 2 horas, Esta tarde, Mañana)',
   // Home Coordinador
   myZone: 'Mi centro',
   updated: 'Actualizada',
@@ -61,6 +62,7 @@ const en: typeof es = {
   needClaimed: 'You took on this need!',
   needConfirmed: 'Arrival confirmed.',
   needReopened: 'Need reopened.',
+  promptEta: 'When do you estimate delivering this supply? (E.g., 2 hours, This afternoon, Tomorrow)',
   myZone: 'My center',
   updated: 'Up to date',
   outdated: 'Outdated',

@@ -71,7 +71,9 @@ const canClaim = computed(() => session.isVerified || admin.isAdmin)
 function needStatus(item: InventoryItem) { return item.status || 'abierta' }
 
 async function doClaim(item: InventoryItem) {
-  const r = await hubsStore.claimNeed(hubId.value, item.id, session.name ?? undefined)
+  const eta = window.prompt(t('hubs.promptEta'), '2 horas')
+  if (eta === null) return // User cancelled
+  const r = await hubsStore.claimNeed(hubId.value, item.id, session.name ?? undefined, eta || undefined)
   if (r.ok) toast.success(t('hubs.needClaimed'))
   else toast.error(r.error || t('common.error'))
 }
@@ -262,6 +264,10 @@ async function doReopen(item: InventoryItem) {
               <p class="text-[11px] text-slate-600 inline-flex items-center gap-1">
                 <MaterialIcon name="person" :size="12" class="text-slate-400" />
                 {{ t('hubs.needClaimedBy', { name: item.claimedByName || t('hubs.needSomeone') }) }}
+              </p>
+              <p v-if="item.eta" class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200/50 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1 mt-1 mb-2">
+                <MaterialIcon name="schedule" :size="11" />
+                <span>ETA: {{ item.eta }}</span>
               </p>
               <a
                 :href="getWhatsAppContactUrl(hub.contactPhone)"

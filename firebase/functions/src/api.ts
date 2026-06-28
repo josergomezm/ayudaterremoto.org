@@ -1067,7 +1067,15 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       if (m === "POST" && action === "claim") {
         // Idempotente: si ya está tomada/confirmada, se rechaza (evita el "don't buy twice").
         if (status !== "abierta") return send(400, { error: "not_open", message: "Esta necesidad ya fue tomada." });
-        await itemRef.update({ status: "tomada", claimedBy: actor.id, claimedByName: actor.name ?? actor.id, claimedAt: now, updatedAt: now });
+        const eta = typeof req.body?.eta === "string" ? req.body.eta.trim().slice(0, 100) : null;
+        await itemRef.update({ 
+          status: "tomada", 
+          claimedBy: actor.id, 
+          claimedByName: actor.name ?? actor.id, 
+          claimedAt: now, 
+          eta,
+          updatedAt: now 
+        });
         await logAudit(actor, "need_claim", { type: "inventoryItem", id: needId }, { hubId });
         return send(200, { ok: true, status: "tomada" });
       }
@@ -1090,6 +1098,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
           status: "abierta",
           claimedBy: null, claimedByName: null, claimedAt: null,
           confirmedBy: null, confirmedByName: null, confirmedAt: null, proofUrl: null,
+          eta: null,
           reopenedCount: (item.reopenedCount ?? 0) + 1,
           reopenedByName: actor.name ?? actor.id,
           updatedAt: now,

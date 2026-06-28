@@ -180,6 +180,7 @@ export interface InventoryItem {
   proofUrl?: string | null;        // opcional: foto recibo/entrega (solo URL)
   reopenedCount?: number;          // historial breve para auditoría
   reopenedByName?: string | null;  // nombre de quien reabrió (para "Reabierta por …")
+  eta?: string | null;
 }
 
 export interface HubLog {

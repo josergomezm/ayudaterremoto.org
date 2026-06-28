@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // "Mi actividad" (WS5 · Fase A = versión base; se amplía en la Fase C).
 // Lista las necesidades de las que te encargaste (mineClaim) o que confirmaste.
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useHubsStore, type InventoryItem, type ResourceHub } from '../stores/hubs'
 import { useSessionStore } from '../stores/session'
@@ -13,7 +13,15 @@ const { t } = useI18n()
 const hubs = useHubsStore()
 const session = useSessionStore()
 
-onMounted(() => { if (hubs.hubs.length === 0) hubs.fetchAll() })
+onMounted(() => {
+  hubs.fetchAll()
+})
+
+watch(() => session.email, (newEmail) => {
+  if (newEmail) {
+    hubs.fetchAll()
+  }
+})
 
 interface Need { item: InventoryItem; hub: ResourceHub }
 const mine = computed<Need[]>(() =>
