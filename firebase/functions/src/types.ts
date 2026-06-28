@@ -3,13 +3,13 @@
 
 // Roles (Workstream 1): colapsados a 4 ranks. Authority+Command fusionados en
 // Organizador. Coordinador vive en users/{email}; Organizador+ en adminUsers/{email}.
-export type Role = "colaborador" | "rescatista" | "coordinador" | "organizador" | "fundador";
-export type AdminRole = "organizador" | "fundador";
+export type Role = "civilian" | "rescuer" | "coordinator" | "admin" | "sudo";
+export type AdminRole = "admin" | "sudo";
 export type TriageStatus = "green" | "yellow" | "red";
 export type ReportCategory = "medical" | "structural" | "obstruction" | "resource";
 
 export const ROLE_RANK: Record<Role, number> = {
-  colaborador: 0, rescatista: 1, coordinador: 2, organizador: 3, fundador: 4,
+  civilian: 0, rescuer: 1, coordinator: 2, admin: 3, sudo: 4,
 };
 
 export interface VouchCode {
@@ -44,7 +44,7 @@ export interface ResponderRequest {
   phone: string;
   note?: string;
   requestedAt: string;
-  requestedRole?: "rescatista" | "coordinador";
+  requestedRole?: "rescuer" | "coordinator";
 }
 
 export interface Incident {

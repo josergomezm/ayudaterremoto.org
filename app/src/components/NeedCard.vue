@@ -12,7 +12,7 @@ import MaterialIcon from './MaterialIcon.vue'
 const props = defineProps<{
   item: InventoryItem
   hub: Pick<ResourceHub, 'id' | 'name' | 'contactPhone' | 'whatsappGroup'>
-  mode: 'colaborador' | 'coordinador'
+  mode: 'civilian' | 'coordinator'
   offline?: boolean
 }>()
 
@@ -93,8 +93,8 @@ async function close() {
     <!-- Nota de estado -->
     <div v-if="state === 'tomada'" class="nc-note flex-col items-start gap-1.5">
       <div class="flex items-center gap-2">
-        <MaterialIcon :name="mode === 'coordinador' ? 'local_shipping' : 'person'" :size="18" />
-        <span>{{ mode === 'coordinador' ? t('home.inTransit') : t('home.someoneHandling') }} · <b>{{ claimer }}</b></span>
+        <MaterialIcon :name="mode === 'coordinator' ? 'local_shipping' : 'person'" :size="18" />
+        <span>{{ mode === 'coordinator' ? t('home.inTransit') : t('home.someoneHandling') }} · <b>{{ claimer }}</b></span>
       </div>
       <div v-if="item.eta" class="text-xs text-[var(--amber-c)] bg-[var(--amber-bg)] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 mt-0.5">
         <MaterialIcon name="schedule" :size="14" />
@@ -115,7 +115,7 @@ async function close() {
 
     <!-- Acciones -->
     <!-- Colaborador, abierta/reabierta -->
-    <template v-if="mode === 'colaborador'">
+    <template v-if="mode === 'civilian'">
       <template v-if="state === 'abierta' || state === 'reabierta'">
         <div v-if="offline" class="nc-pending">
           <MaterialIcon name="schedule" :size="20" /> {{ t('home.offlinePending') }}

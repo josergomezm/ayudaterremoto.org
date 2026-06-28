@@ -50,11 +50,11 @@ export async function seedSupplyDemo(): Promise<void> {
 
   // Coordinadores de campo (users/) — dueños de zonas. Inicia sesión como uno de
   // estos en el emulador para ver la vista "Mi zona".
-  await db.doc("users/maria@demo.com").set({ email: "maria@demo.com", role: "coordinador", name: "María González", updatedAt: now });
-  await db.doc("users/carlos@demo.com").set({ email: "carlos@demo.com", role: "coordinador", name: "Carlos Pérez", updatedAt: now });
-  await db.doc("users/rescatista@demo.com").set({ email: "rescatista@demo.com", role: "rescatista", name: "Juan Rescate", updatedAt: now });
+  await db.doc("users/maria@demo.com").set({ email: "maria@demo.com", role: "coordinator", name: "María González", updatedAt: now });
+  await db.doc("users/carlos@demo.com").set({ email: "carlos@demo.com", role: "coordinator", name: "Carlos Pérez", updatedAt: now });
+  await db.doc("users/rescatista@demo.com").set({ email: "rescatista@demo.com", role: "rescuer", name: "Juan Rescate", updatedAt: now });
   // Un Organizador adicional (además del Fundador del seed).
-  await db.doc("adminUsers/coordinacion@demo.com").set({ email: "coordinacion@demo.com", role: "organizador" });
+  await db.doc("adminUsers/coordinacion@demo.com").set({ email: "coordinacion@demo.com", role: "admin" });
 
   // Seed pending responder requests (one Coordinator, one Rescuer)
   await db.doc("responderRequests/solicitud.coordinador@demo.com").set({
@@ -62,7 +62,7 @@ export async function seedSupplyDemo(): Promise<void> {
     name: "Ana Suministros",
     phone: "+58 414 7778899",
     note: "Coordinadora de la brigada de recolección en Petare.",
-    requestedRole: "coordinador",
+    requestedRole: "coordinator",
     requestedAt: now
   });
   await db.doc("responderRequests/solicitud.rescatista@demo.com").set({
@@ -70,7 +70,7 @@ export async function seedSupplyDemo(): Promise<void> {
     name: "Luis Salvamento",
     phone: "+58 412 9991122",
     note: "Paramédico y socorrista de Protección Civil.",
-    requestedRole: "rescatista",
+    requestedRole: "rescuer",
     requestedAt: now
   });
 
@@ -113,7 +113,7 @@ export async function seedSupplyDemo(): Promise<void> {
 }
 
 /** Upsert an admin by email. Defaults to Fundador (rol raíz, solo por seed). */
-export async function ensureAdmin(email: string, role: AdminRole = "fundador"): Promise<void> {
+export async function ensureAdmin(email: string, role: AdminRole = "sudo"): Promise<void> {
   const key = email.toLowerCase();
   await db.doc(`adminUsers/${key}`).set({ email: key, role });
 }

@@ -14,7 +14,7 @@ export const echoSchema = z.object({
 // Admin-role management (Command only):
 export const adminUserSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["organizador", "fundador"]),
+  role: z.enum(["admin", "sudo"]),
 });
 
 export const adminEmailSchema = z.object({
@@ -25,7 +25,7 @@ export const adminEmailSchema = z.object({
 export const accessRequestSchema = z.object({
   phone: z.string().min(5),
   note: z.string().max(500).optional(),
-  role: z.enum(["rescatista", "coordinador"]).optional(),
+  role: z.enum(["rescuer", "coordinator"]).optional(),
 });
 
 const categorySchema = z.enum(["medical", "structural", "obstruction", "resource"]);

@@ -1,30 +1,27 @@
-// Copy is written for a crisis context — people are scared and need to act fast.
-// Keep sentences short, verbs first, no bureaucratic language.
-
 const es = {
   slide1: {
     label: 'Paso 1 de 4',
     heading: 'Aquí coordinamos la ayuda',
-    body: 'Ayuda Terremoto conecta a personas afectadas con voluntarios and brigadas. Puedes reportar emergencias, buscar personas desaparecidas y ver qué está pasando en tu zona, incluso sin conexión.',
+    body: 'Ayuda Terremoto conecta a personas afectadas con voluntarios y equipos de rescate. Puedes reportar emergencias, buscar desaparecidos y ver qué se necesita en tu zona, incluso sin internet.',
   },
   slide2: {
     label: 'Paso 2 de 4',
     heading: '¿Qué puedes hacer?',
     tabs: {
-      map: { title: 'Mapa', desc: 'Ve todos los incidentes activos en tu área ordenados por gravedad.' },
-      report: { title: 'Reportar', desc: 'Reporta una emergencia para ti o para otra persona. Requiere verificación.' },
-      alerts: { title: 'Alertas', desc: 'Avisos oficiales del equipo de respuesta. Léelos primero.' },
-      guides: { title: 'Guías', desc: 'Instrucciones de seguridad para sismos, fugas de gas y primeros auxilios. Funcionan sin internet.' },
-      people: { title: 'Consultas', desc: 'Busca desaparecidos, ingresados a hospitales o solicita revisión de edificios.' },
+      map: { title: 'Mapa', desc: 'Ver todos los reportes de emergencias activos en tu zona, ordenados por gravedad.' },
+      report: { title: 'Reportar', desc: 'Enviar un reporte de emergencia propio o de otra persona. Requiere verificación.' },
+      alerts: { title: 'Alertas', desc: 'Canal oficial de avisos y correcciones de los equipos de rescate. Léelo primero.' },
+      guides: { title: 'Guías', desc: 'Protocolos de seguridad ante sismos, fugas de gas y primeros auxilios. Funcionan offline.' },
+      people: { title: 'Búsquedas', desc: 'Consultar personas desaparecidas, ingresos a hospitales o solicitar la inspección de un edificio.' },
     },
   },
   slide3_hubs: {
     label: 'Paso 3 de 4',
     heading: 'Centros de Suministro',
-    body: 'Hemos habilitado un mapa y listado de centros donde se distribuye agua, comida, herramientas y refugio. Cualquiera puede ver la disponibilidad y urgencia en tiempo real para donar o solicitar ayuda.',
+    body: 'Hemos habilitado una capa de mapa y directorio de centros que distribuyen agua, comida, herramientas y refugio. Cualquiera puede ver la disponibilidad en tiempo real para donar o solicitar apoyo.',
     coordTitle: 'Ayuda con la coordinación',
-    coordBody: '¿Quieres coordinar o gestionar el inventario de un centro? Solicita acceso para unirte a nuestros grupos de trabajo de WhatsApp.',
-    coordCta: 'Contactar Coordinación en WhatsApp',
+    coordBody: '¿Deseas coordinar un centro o registrar insumos? Solicita acceso para unirte a nuestros grupos de trabajo en WhatsApp.',
+    coordCta: 'Contactar a Coordinación en WhatsApp',
   },
   slide3: {
     label: 'Paso 4 de 4',
@@ -35,19 +32,19 @@ const es = {
         name: 'Sin verificar',
         desc: 'Puedes ver el mapa, leer alertas y consultar guías. No puedes reportar.',
       },
-      colaborador: {
+      civilian: {
         name: 'Colaborador',
         desc: 'Iniciaste sesión con Google. Puedes reportar emergencias y buscar personas.',
       },
-      coordinador: {
+      coordinator: {
         name: 'Coordinador',
         desc: 'Te dieron un código de aval. Puedes actualizar estados y gestionar tu centro.',
       },
-      organizador: {
+      admin: {
         name: 'Organizador',
         desc: 'Coordinas la operación: creas centros, asignas coordinadores, transmites avisos y revisas reportes.',
       },
-      fundador: {
+      sudo: {
         name: 'Fundador',
         desc: 'Administrador raíz. Gestiona el equipo y toda la operación.',
       },
@@ -95,19 +92,19 @@ const en: typeof es = {
         name: 'Unverified',
         desc: 'You can view the map, read alerts, and check guides. You cannot file reports.',
       },
-      colaborador: {
+      civilian: {
         name: 'Collaborator',
         desc: 'Signed in with Google. You can report emergencies and search for people.',
       },
-      coordinador: {
+      coordinator: {
         name: 'Coordinator',
         desc: 'You were given a vouch code. You can update statuses and manage your center.',
       },
-      organizador: {
+      admin: {
         name: 'Organizer',
         desc: 'You run the operation: create centers, assign coordinators, broadcast notices, and review reports.',
       },
-      fundador: {
+      sudo: {
         name: 'Founder',
         desc: 'Root administrator. Manages the full team and all operations.',
       },

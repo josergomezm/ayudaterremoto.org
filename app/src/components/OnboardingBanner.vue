@@ -13,7 +13,7 @@ const dismissed = ref(false)
 
 const variant = computed(() => {
   if (!session.isVerified) return 'unverified'
-  if (session.role === 'colaborador') return 'colaborador'
+  if (session.role === 'civilian') return 'civilian'
   return null // coordinador and above: no banner
 })
 
@@ -23,7 +23,7 @@ const config = computed(() => {
     heading:    t(`onboarding.${variant.value}.heading`),
     body:       t(`onboarding.${variant.value}.body`),
     cta:        t(`onboarding.${variant.value}.cta`),
-    ctaTo:      '/verify',
+    ctaTo:      '/profile',
     icon:       variant.value === 'unverified' ? 'lock_person' : 'verified_user',
     accent:     variant.value === 'unverified' ? 'amber' : 'indigo',
   }

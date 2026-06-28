@@ -14,11 +14,11 @@ const busy = ref(false)
 
 const requestNote = ref('')
 const requestPhone = ref('')
-const requestRole = ref<'rescatista' | 'coordinador'>('rescatista')
+const requestRole = ref<'rescuer' | 'coordinator'>('rescuer')
 const requestStatus = ref<string | null>(null)
 
 async function loadRequestStatus() {
-  if (session.role === 'colaborador') {
+  if (session.role === 'civilian') {
     busy.value = true
     try {
       const res = await session.checkResponderRequest()
@@ -96,11 +96,11 @@ async function doSubmitRequest() {
 }
 
 function getRoleLabel(role: string) {
-  if (role === 'colaborador') return t('verify.roleColaborador')
-  if (role === 'rescatista') return t('verify.roleRescatista')
-  if (role === 'coordinador') return t('verify.roleCoordinador')
-  if (role === 'organizador') return t('verify.roleOrganizador')
-  if (role === 'fundador') return t('verify.roleFundador')
+  if (role === 'civilian') return t('verify.roleColaborador')
+  if (role === 'rescuer') return t('verify.roleRescatista')
+  if (role === 'coordinator') return t('verify.roleCoordinador')
+  if (role === 'admin') return t('verify.roleOrganizador')
+  if (role === 'sudo') return t('verify.roleFundador')
   return role
 }
 </script>
@@ -169,7 +169,7 @@ function getRoleLabel(role: string) {
           <div class="border-t border-[var(--line)] pt-3 flex justify-between items-center text-sm">
             <span class="font-bold text-[var(--ink2)]">{{ t('verify.activeRole') }}</span>
             <span class="rounded-full bg-[var(--primary)] text-white px-3.5 py-1 text-xs font-extrabold tracking-wide uppercase">
-              {{ getRoleLabel(session.role ?? 'colaborador') }}
+              {{ getRoleLabel(session.role ?? 'civilian') }}
             </span>
           </div>
         </div>
@@ -185,14 +185,14 @@ function getRoleLabel(role: string) {
           </p>
           <ul class="space-y-2">
             <!-- Colaborador list -->
-            <template v-if="session.role === 'colaborador'">
+            <template v-if="session.role === 'civilian'">
               <li v-for="(b, i) in (tm('verify.civilianBenefits') as string[])" :key="i" class="flex items-start gap-2 text-xs text-[var(--ink2)] leading-relaxed">
                 <MaterialIcon name="check" :size="16" class="text-[var(--green-dot)] shrink-0 mt-0.5" />
                 <span>{{ rt(b) }}</span>
               </li>
             </template>
             <!-- Rescatista list -->
-            <template v-else-if="session.role === 'rescatista'">
+            <template v-else-if="session.role === 'rescuer'">
               <li class="flex items-start gap-2 text-xs text-[var(--ink)] font-semibold leading-relaxed">
                 <MaterialIcon name="check_circle" :size="16" class="text-[var(--primary)] shrink-0 mt-0.5" />
                 <span>Actualizar estados y nivel de triaje de reportes de emergencias</span>
@@ -207,7 +207,7 @@ function getRoleLabel(role: string) {
               </li>
             </template>
             <!-- Coordinador list -->
-            <template v-else-if="session.role === 'coordinador'">
+            <template v-else-if="session.role === 'coordinator'">
               <li class="flex items-start gap-2 text-xs text-[var(--ink)] font-semibold leading-relaxed">
                 <MaterialIcon name="check_circle" :size="16" class="text-[var(--primary)] shrink-0 mt-0.5" />
                 <span>Gestión de zona: crear necesidades y confirmar suministros</span>
@@ -222,7 +222,7 @@ function getRoleLabel(role: string) {
               </li>
             </template>
             <!-- Organizador list -->
-            <template v-else-if="session.role === 'organizador'">
+            <template v-else-if="session.role === 'admin'">
               <li class="flex items-start gap-2 text-xs text-[var(--ink)] font-semibold leading-relaxed">
                 <MaterialIcon name="check_circle" :size="16" class="text-[var(--primary)] shrink-0 mt-0.5" />
                 <span>Crear y administrar puntos de suministros (hubs)</span>
@@ -237,7 +237,7 @@ function getRoleLabel(role: string) {
               </li>
             </template>
             <!-- Fundador list -->
-            <template v-else-if="session.role === 'fundador'">
+            <template v-else-if="session.role === 'sudo'">
               <li class="flex items-start gap-2 text-xs text-[var(--ink)] font-semibold leading-relaxed">
                 <MaterialIcon name="security" :size="16" class="text-[var(--red-dot)] shrink-0 mt-0.5" />
                 <span>Acceso completo de administrador global</span>
@@ -251,7 +251,7 @@ function getRoleLabel(role: string) {
         </div>
 
         <!-- Volunteer/Coordinator Request Flow -->
-        <div v-if="session.role === 'colaborador'" class="space-y-4">
+        <div v-if="session.role === 'civilian'" class="space-y-4">
           <!-- Pending State -->
           <div v-if="requestStatus === 'pending'" class="card bg-[var(--amber-bg)] border border-[var(--line)] space-y-2 text-[var(--amber-c)]">
             <div class="flex items-center gap-2 font-bold">
@@ -280,8 +280,8 @@ function getRoleLabel(role: string) {
               <div class="space-y-1.5">
                 <label class="block text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('verify.requestRoleLabel') }} *</label>
                 <select v-model="requestRole" class="input-field">
-                  <option value="rescatista">{{ t('verify.roleRescatista') }}</option>
-                  <option value="coordinador">{{ t('verify.roleCoordinador') }}</option>
+                  <option value="rescuer">{{ t('verify.roleRescatista') }}</option>
+                  <option value="coordinator">{{ t('verify.roleCoordinador') }}</option>
                 </select>
               </div>
               <div class="space-y-1.5">

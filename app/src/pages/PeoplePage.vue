@@ -23,8 +23,8 @@ const toast = useToast()
 const activeTab = ref<'people' | 'patients' | 'buildings'>('people')
 
 const canReport = computed(() => session.isVerified || admin.isAdmin)
-const canResolveBuilding = computed(() => session.can('rescatista') || admin.isAdmin)
-const canImportPatients = computed(() => session.can('coordinador') || admin.isAdmin)
+const canResolveBuilding = computed(() => session.can('rescuer') || admin.isAdmin)
+const canImportPatients = computed(() => session.can('coordinator') || admin.isAdmin)
 
 // People Search
 const search = ref('')
@@ -207,7 +207,7 @@ const getAdmittedPatientForMissing = (missingId: string) => {
 }
 
 // Marking found is allowed for the reporter (p.mine) OR a responder/coordinator/admin.
-const canMarkFound = (p: { mine?: boolean }) => admin.isAdmin || session.can('rescatista') || !!p.mine
+const canMarkFound = (p: { mine?: boolean }) => admin.isAdmin || session.can('rescuer') || !!p.mine
 </script>
 
 <template>

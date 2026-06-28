@@ -4,8 +4,8 @@ import { apiFetch } from '../lib/api'
 import { auth, googleProvider } from '../lib/firebase'
 import { signInWithPopup, signOut as fbSignOut, onAuthStateChanged, type User } from 'firebase/auth'
 
-export type Role = 'colaborador' | 'rescatista' | 'coordinador' | 'organizador' | 'fundador'
-const RANK: Record<Role, number> = { colaborador: 0, rescatista: 1, coordinador: 2, organizador: 3, fundador: 4 }
+export type Role = 'civilian' | 'rescuer' | 'coordinator' | 'admin' | 'sudo'
+const RANK: Record<Role, number> = { civilian: 0, rescuer: 1, coordinator: 2, admin: 3, sudo: 4 }
 
 export const useSessionStore = defineStore('session', () => {
   const user = ref<User | null>(null)
@@ -43,7 +43,7 @@ export const useSessionStore = defineStore('session', () => {
         email.value = profile.email
       } else {
         // Fallback profile if server is not responding yet
-        role.value = 'colaborador'
+        role.value = 'civilian'
         name.value = u.displayName || u.email || 'Google User'
         email.value = u.email
       }
@@ -90,7 +90,7 @@ export const useSessionStore = defineStore('session', () => {
     return { ok: false, error: res.error }
   }
 
-  async function requestResponder(phone: string, note: string, role?: 'rescatista' | 'coordinador'): Promise<{ ok: boolean; error?: string }> {
+  async function requestResponder(phone: string, note: string, role?: 'rescuer' | 'coordinator'): Promise<{ ok: boolean; error?: string }> {
     const fbUser = auth.currentUser
     if (!fbUser) return { ok: false, error: 'Inicie sesión primero' }
     const token = await fbUser.getIdToken()

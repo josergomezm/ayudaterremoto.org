@@ -81,10 +81,10 @@ function isActive(to: string): boolean {
 }
 
 function getRoleLabel(role: string) {
-  if (role === 'colaborador') return t('verify.roleColaborador')
-  if (role === 'coordinador') return t('verify.roleCoordinador')
-  if (role === 'organizador') return t('verify.roleOrganizador')
-  if (role === 'fundador') return t('verify.roleFundador')
+  if (role === 'civilian') return t('verify.roleColaborador')
+  if (role === 'coordinator') return t('verify.roleCoordinador')
+  if (role === 'admin') return t('verify.roleOrganizador')
+  if (role === 'sudo') return t('verify.roleFundador')
   return role
 }
 </script>
@@ -221,7 +221,7 @@ function getRoleLabel(role: string) {
               </div>
               <div class="min-w-0 flex-1">
                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                  {{ session.isVerified ? getRoleLabel(session.role ?? 'colaborador') : 'Invitado' }}
+                  {{ session.isVerified ? getRoleLabel(session.role ?? 'civilian') : 'Invitado' }}
                 </p>
                 <p class="text-xs font-bold text-slate-800 truncate">
                   {{ session.isVerified ? session.name : 'Iniciar Sesión' }}

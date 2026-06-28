@@ -114,7 +114,7 @@ function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value
 
         <div class="section-label">{{ t('home.inMyZone') }}</div>
         <div class="list">
-          <NeedCard v-for="n in zoneNeeds" :key="n.item.id" :item="n.item" :hub="n.hub" mode="coordinador" />
+          <NeedCard v-for="n in zoneNeeds" :key="n.item.id" :item="n.item" :hub="n.hub" mode="coordinator" />
           <div v-if="zoneNeeds.length === 0" class="muted">{{ t('hubs.emptyInventory') }}</div>
         </div>
       </div>
@@ -186,7 +186,7 @@ function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value
             :key="n.item.id"
             :item="n.item"
             :hub="n.hub"
-            :mode="canManage(n.hub) ? 'coordinador' : 'colaborador'"
+            :mode="canManage(n.hub) ? 'coordinator' : 'civilian'"
             :offline="!online"
           />
         </div>

@@ -28,7 +28,7 @@ const submitting = ref(false)
 
 const isAuthorized = computed(() => {
   if (!session.ready) return true // Keep true while checking to prevent layout flash
-  return session.can('coordinador') || admin.isAdmin
+  return session.can('coordinator') || admin.isAdmin
 })
 
 function onLocationUpdated(loc: { lat: number; lng: number }) {

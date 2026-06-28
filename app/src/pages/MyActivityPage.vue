@@ -44,7 +44,7 @@ const mine = computed<Need[]>(() =>
           :key="n.item.id"
           :item="n.item"
           :hub="n.hub"
-          :mode="session.email === n.hub.createdBy ? 'coordinador' : 'colaborador'"
+          :mode="session.email === n.hub.createdBy ? 'coordinator' : 'civilian'"
         />
       </div>
 

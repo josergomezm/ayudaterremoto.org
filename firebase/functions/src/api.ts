@@ -68,7 +68,7 @@ async function isHubCoordinator(hubId: string, actorEmail: string): Promise<bool
   const adminSnap = await db.doc(`adminUsers/${actorEmail}`).get();
   if (adminSnap.exists) {
     const role = (adminSnap.data() as { role: string }).role;
-    if (role === "organizador") return true;
+    if (role === "admin") return true;
   }
 
   const hubSnap = await db.doc(`resourceHubs/${hubId}`).get();
@@ -138,14 +138,14 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
 
       // Upgrade role to coordinador in users collection
       const userRef = db.doc(`users/${fbUser.email}`);
-      await userRef.set({ email: fbUser.email, role: "coordinador", name: fbUser.name, updatedAt: new Date().toISOString() });
+      await userRef.set({ email: fbUser.email, role: "coordinator", name: fbUser.name, updatedAt: new Date().toISOString() });
 
       // Mark vouch code as used
       await codeRef.update({ used: true });
       await db.collection("vouchAudit").add({ voucher: vc.voucher, voucheeEmail: fbUser.email, timestamp: new Date().toISOString() });
-      await logAudit({ id: fbUser.email, role: "coordinador", kind: "field" }, "vouch_redeem", { type: "vouchCode", id: vouchCode.toUpperCase() }, { voucher: vc.voucher });
+      await logAudit({ id: fbUser.email, role: "coordinator", kind: "field" }, "vouch_redeem", { type: "vouchCode", id: vouchCode.toUpperCase() }, { voucher: vc.voucher });
 
-      return send(200, { role: "coordinador" });
+      return send(200, { role: "coordinator" });
     }
 
     // ── Admin: who am I (role gate for the portal) ───────────────────────
@@ -176,17 +176,17 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     // ── Access requests management (Command) ─────────────────────────────
     if (m === "GET" && path === "/admin/requests") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const q = await db.collection("accessRequests").get();
       return send(200, { requests: q.docs.map((d) => d.data() as AccessRequest) });
     }
     if (m === "POST" && path === "/admin/requests/approve") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const { email, role } = adminUserSchema.parse(req.body);
       const key = email.toLowerCase();
 
-      if (role === "fundador" && actor!.role !== "fundador") {
+      if (role === "sudo" && actor!.role !== "sudo") {
         return send(403, { error: "forbidden", message: "Solo un Fundador puede asignar el rol de Fundador." });
       }
 
@@ -197,7 +197,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     }
     if (m === "POST" && path === "/admin/requests/deny") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const { email } = adminEmailSchema.parse(req.body);
       await db.doc(`accessRequests/${email.toLowerCase()}`).delete();
       await logAudit(actor, "access_deny", { type: "accessRequest", id: email.toLowerCase() });
@@ -210,7 +210,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       if (!fbUser) return send(401, { error: "unauthenticated" });
 
       const actor = await getActor(req);
-      if (actor && hasRole(actor, "coordinador")) {
+      if (actor && hasRole(actor, "coordinator")) {
         return send(400, { error: "already_responder", message: "Ya eres Coordinador o superior." });
       }
 
@@ -222,11 +222,11 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
           name: fbUser.name,
           phone,
           note,
-          requestedRole: role || "coordinador",
+          requestedRole: role || "coordinator",
           requestedAt: new Date().toISOString()
         };
         await ref.set(reqDoc);
-        await logAudit({ id: fbUser.email, role: "colaborador", kind: "user" }, "responder_request", { type: "responderRequest", id: fbUser.email });
+        await logAudit({ id: fbUser.email, role: "civilian", kind: "user" }, "responder_request", { type: "responderRequest", id: fbUser.email });
         return send(200, { status: "pending" });
       }
       if (m === "GET") {
@@ -238,20 +238,20 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     // ── Responder requests management (Authority+) ───────────────────────
     if (m === "GET" && path === "/admin/responder-requests") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const q = await db.collection("responderRequests").get();
       return send(200, { requests: q.docs.map((d) => d.data() as ResponderRequest) });
     }
     if (m === "POST" && path === "/admin/responder-requests/approve") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const { email } = adminEmailSchema.parse(req.body);
       const key = email.toLowerCase();
       
       const reqSnap = await db.doc(`responderRequests/${key}`).get();
       const reqData = reqSnap.exists ? (reqSnap.data() as ResponderRequest) : null;
       const userName = reqData?.name || key;
-      const approvedRole = reqData?.requestedRole || "coordinador";
+      const approvedRole = reqData?.requestedRole || "coordinator";
 
       await db.doc(`users/${key}`).set({
         email: key,
@@ -265,7 +265,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     }
     if (m === "POST" && path === "/admin/responder-requests/deny") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const { email } = adminEmailSchema.parse(req.body);
       const key = email.toLowerCase();
       await db.doc(`responderRequests/${key}`).delete();
@@ -276,16 +276,16 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     // ── Responders management (Authority+) ───────────────────────────────
     if (m === "GET" && path === "/admin/responders") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const q = await db.collection("users").get();
       const responders = q.docs
         .map((d) => d.data())
-        .filter((u) => u.role === "coordinador");
+        .filter((u) => u.role === "coordinator");
       return send(200, { responders });
     }
     if (m === "POST" && path === "/admin/responders/remove") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const { email } = adminEmailSchema.parse(req.body);
       const key = email.toLowerCase();
       await db.doc(`users/${key}`).delete();
@@ -296,7 +296,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     // ── Vouch code generation (Authority+) ───────────────────────────────
     if (m === "POST" && path === "/vouch/generate") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden", message: "Requiere rol Organizador." });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden", message: "Requiere rol Organizador." });
       const code = newVouchCode();
       const doc: VouchCode = { code, used: false, voucher: actor!.id, createdAt: new Date().toISOString() };
       await db.doc(`vouchCodes/${code}`).set(doc);
@@ -307,7 +307,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     // ── Vouch audit log (Command) ────────────────────────────────────────
     if (m === "GET" && path === "/vouch/audit") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const q = await db.collection("vouchAudit").orderBy("timestamp", "desc").limit(200).get();
       return send(200, { entries: q.docs.map((d) => d.data()) });
     }
@@ -315,7 +315,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     // ── Full activity / audit log (Command) ──────────────────────────────
     if (m === "GET" && path === "/admin/audit") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const q = await db.collection("auditLog").orderBy("timestamp", "desc").limit(300).get();
       return send(200, { entries: q.docs.map((d) => d.data()) });
     }
@@ -323,13 +323,13 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     // ── Admin user management (Command/Authority for GET) ────────────────
     if (m === "GET" && path === "/admin/users") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const q = await db.collection("adminUsers").get();
       return send(200, { users: q.docs.map((d) => d.data() as AdminUser) });
     }
     if (m === "POST" && path === "/admin/users") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const { email, role } = adminUserSchema.parse(req.body);
       const key = email.toLowerCase();
 
@@ -337,13 +337,13 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       const targetSnap = await db.doc(`adminUsers/${key}`).get();
       if (targetSnap.exists) {
         const targetData = targetSnap.data() as AdminUser;
-        if (targetData.role === "fundador" && actor!.role !== "fundador") {
+        if (targetData.role === "sudo" && actor!.role !== "sudo") {
           return send(403, { error: "cannot_modify_sudo", message: "No se puede modificar a un usuario Fundador." });
         }
       }
 
       // Check if actor is trying to assign sudo but is not sudo
-      if (role === "fundador" && actor!.role !== "fundador") {
+      if (role === "sudo" && actor!.role !== "sudo") {
         return send(403, { error: "forbidden", message: "Solo un Fundador puede asignar el rol de Fundador." });
       }
 
@@ -353,7 +353,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     }
     if (m === "POST" && path === "/admin/users/remove") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       const { email } = adminEmailSchema.parse(req.body);
       const key = email.toLowerCase();
       if (key === actor!.id) return send(400, { error: "self_remove", message: "No puede revocar su propio acceso." });
@@ -362,7 +362,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       const targetSnap = await db.doc(`adminUsers/${key}`).get();
       if (targetSnap.exists) {
         const targetData = targetSnap.data() as AdminUser;
-        if (targetData.role === "fundador") {
+        if (targetData.role === "sudo") {
           return send(403, { error: "cannot_remove_sudo", message: "No se puede remover a un usuario Fundador." });
         }
       }
@@ -375,7 +375,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     // ── Analyze image and create report (Command only) ───────────────────
     if (m === "POST" && path === "/reports/analyze-image") {
       const actor = await getActor(req);
-      if (!actor || !hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!actor || !hasRole(actor, "admin")) return send(403, { error: "forbidden" });
 
       const { imageUrl, imageBase64, context, lat, lng } = req.body;
       if (!imageUrl && !imageBase64) {
@@ -543,7 +543,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     // ── Incidents list (public) ──────────────────────────────────────────
     if (m === "GET" && path === "/incidents") {
       const viewer = await getActor(req);
-      const showReporters = hasRole(viewer, "coordinador"); // reporter names only for coordinador+
+      const showReporters = hasRole(viewer, "coordinator"); // reporter names only for coordinador+
       const q = await db.collection("incidents").get();
       const all = q.docs.map((d) => d.data() as Incident);
 
@@ -589,7 +589,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       const actor = await getActor(req);
 
       if (m === "POST" && action === "status") {
-        if (!hasRole(actor, "rescatista")) return send(403, { error: "forbidden" });
+        if (!hasRole(actor, "rescuer")) return send(403, { error: "forbidden" });
         const status = statusSchema.parse(req.body).status;
         const updateData: Partial<Incident> = { status };
         if (status === "red" || status === "yellow") {
@@ -608,7 +608,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         return send(200, { incident: publicIncident({ ...incident, evacuated: true, status: "green" }) });
       }
       if (m === "POST" && action === "resolve") {
-        if (!hasRole(actor, "rescatista")) return send(403, { error: "forbidden" });
+        if (!hasRole(actor, "rescuer")) return send(403, { error: "forbidden" });
         await ref.update({ resolved: true, resolutionConfirmed: null });
         await logAudit(actor, "incident_resolve", { type: "incident", id: seg[1] });
         return send(200, { incident: publicIncident({ ...incident, resolved: true, resolutionConfirmed: null }) });
@@ -657,7 +657,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       // Only the original reporter (matched by id) or a responder+ may close it.
       const person = personSnap.data() as MissingPerson;
       const isReporter = actor.id === person.reporterId;
-      if (!isReporter && !hasRole(actor, "rescatista")) {
+      if (!isReporter && !hasRole(actor, "rescuer")) {
         return send(403, { error: "forbidden", message: "Solo el reportante o un rescatista/coordinador puede marcarla." });
       }
       const { byPhone, note } = missingFoundSchema.parse(req.body || {});
@@ -701,7 +701,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     if (m === "POST" && seg[0] === "location-requests" && seg.length === 3 && seg[2] === "resolve") {
       const actor = await getActor(req);
       if (!actor) return send(401, { error: "unauthenticated" });
-      if (!hasRole(actor, "rescatista")) return send(403, { error: "forbidden", message: "Solo rescatistas o coordinadores pueden responder." });
+      if (!hasRole(actor, "rescuer")) return send(403, { error: "forbidden", message: "Solo rescatistas o coordinadores pueden responder." });
 
       const ref = db.doc(`locationRequests/${seg[1]}`);
       const requestSnap = await ref.get();
@@ -732,7 +732,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     }
     if (m === "POST" && path === "/announcements") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden", message: "Solo un Organizador puede transmitir." });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden", message: "Solo un Organizador puede transmitir." });
       const a = announcementSchema.parse(req.body);
       const id = randomUUID();
       const announcement: Announcement = { id, ...a, createdAt: new Date().toISOString() };
@@ -743,7 +743,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     // Clear an announcement (Command) — takes the banner down once it's stale.
     if (m === "DELETE" && seg[0] === "announcements" && seg.length === 2) {
       const actor = await getActor(req);
-      if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden" });
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
       await db.doc(`announcements/${seg[1]}`).delete();
       await logAudit(actor, "announcement_delete", { type: "announcement", id: seg[1] });
       return send(200, { deleted: seg[1] });
@@ -757,7 +757,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     }
     if (m === "POST" && path === "/patients/analyze-list") {
       const actor = await getActor(req);
-      if (!actor || !hasRole(actor, "coordinador")) {
+      if (!actor || !hasRole(actor, "coordinator")) {
         return send(403, { error: "forbidden", message: "Solo coordinadores pueden ingresar listas de pacientes." });
       }
 
@@ -881,7 +881,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         let isCreatorCommand = false;
         if (creatorAdminSnap.exists) {
           const role = (creatorAdminSnap.data() as { role: string }).role;
-          if (role === "organizador") isCreatorCommand = true;
+          if (role === "admin") isCreatorCommand = true;
         }
         if (!isCreatorCommand) {
           coordinators.push({
@@ -899,7 +899,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
           const adminSnap = await db.doc(`adminUsers/${c.email}`).get();
           if (adminSnap.exists) {
             const role = (adminSnap.data() as { role: string }).role;
-            if (role === "organizador") continue; // Exclude organizadores
+            if (role === "admin") continue; // Exclude organizadores
           }
           coordinators.push(c);
         }
@@ -910,7 +910,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
     }
     if (m === "POST" && path === "/hubs") {
       const actor = await getActor(req);
-      if (!hasRole(actor, "coordinador")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+      if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
       const body = hubCreateSchema.parse(req.body);
       const id = randomUUID();
       const now = new Date().toISOString();
@@ -927,7 +927,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       // PATCH /hubs/:id — Update hub
       if (m === "PATCH" && seg.length === 2) {
         const actor = await getActor(req);
-        if (!hasRole(actor, "coordinador")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
         if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
         const body = hubUpdateSchema.parse(req.body);
         const hubRef = db.doc(`resourceHubs/${hubId}`);
@@ -943,7 +943,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       // POST /hubs/:id/inventory — Add/update inventory item
       if (m === "POST" && seg.length === 3 && seg[2] === "inventory") {
         const actor = await getActor(req);
-        if (!hasRole(actor, "coordinador")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
         if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
         const body = inventoryUpsertSchema.parse(req.body);
         const urgency = body.urgency ?? (body.quantity === 0 ? "depleted" : body.quantity <= 5 ? "low" : "available");
@@ -961,7 +961,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       // DELETE /hubs/:id/inventory/:itemId — Remove inventory item
       if (m === "DELETE" && seg.length === 4 && seg[2] === "inventory") {
         const actor = await getActor(req);
-        if (!hasRole(actor, "coordinador")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
         if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
         const itemId = seg[3];
         const itemRef = db.doc(`resourceHubs/${hubId}/inventory/${itemId}`);
@@ -980,7 +980,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       // POST /hubs/:id/inventory/:itemId/adjust — Adjust quantity
       if (m === "POST" && seg.length === 5 && seg[2] === "inventory" && seg[4] === "adjust") {
         const actor = await getActor(req);
-        if (!hasRole(actor, "coordinador")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
         if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
         const body = inventoryAdjustSchema.parse(req.body);
         const itemId = seg[3];
@@ -1003,7 +1003,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       // GET /hubs/:id/logs — Fetch hub activity log
       if (m === "GET" && seg.length === 3 && seg[2] === "logs") {
         const actor = await getActor(req);
-        if (!hasRole(actor, "coordinador")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
         if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
         const q = await db.collection(`resourceHubs/${hubId}/logs`).orderBy("timestamp", "desc").limit(100).get();
         const logs = q.docs.map((d) => d.data() as HubLog);
@@ -1013,7 +1013,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       // POST /hubs/:id/coordinators — Add coordinator
       if (m === "POST" && seg.length === 3 && seg[2] === "coordinators") {
         const actor = await getActor(req);
-        if (!hasRole(actor, "organizador")) return send(403, { error: "forbidden", message: "Requiere rol Organizador." });
+        if (!hasRole(actor, "admin")) return send(403, { error: "forbidden", message: "Requiere rol Organizador." });
         if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
         const { email } = hubCoordinatorSchema.parse(req.body);
         const key = email.toLowerCase();
@@ -1021,7 +1021,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         const userSnap = await db.doc(`users/${key}`).get();
         if (!userSnap.exists) return send(400, { error: "invalid_user", message: "El usuario no es un Coordinador registrado." });
         const target = userSnap.data() as { role?: string; name?: string };
-        if (target.role !== "coordinador") return send(400, { error: "invalid_user", message: "El usuario debe tener rol Coordinador." });
+        if (target.role !== "coordinator") return send(400, { error: "invalid_user", message: "El usuario debe tener rol Coordinador." });
         const hubSnap = await db.doc(`resourceHubs/${hubId}`).get();
         if (!hubSnap.exists) return send(404, { error: "not_found", message: "Zona no encontrada." });
         const coord: HubCoordinator = { email: key, name: target.name || key, addedBy: actor!.id, addedAt: new Date().toISOString() };
@@ -1033,7 +1033,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       // DELETE /hubs/:id/coordinators/:email — Remove coordinator (hub creator only)
       if (m === "DELETE" && seg.length === 4 && seg[2] === "coordinators") {
         const actor = await getActor(req);
-        if (!hasRole(actor, "coordinador")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
         const hubRef = db.doc(`resourceHubs/${hubId}`);
         const hubSnap = await hubRef.get();
         if (!hubSnap.exists) return send(404, { error: "not_found", message: "Zona no encontrada." });

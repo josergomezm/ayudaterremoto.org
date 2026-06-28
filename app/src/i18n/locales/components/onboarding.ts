@@ -4,7 +4,7 @@ const es = {
     body: 'El mapa es visible para todos. Para enviar reportes, inicia sesión con Google. Solo toma un minuto.',
     cta: 'Verificar identidad',
   },
-  colaborador: {
+  civilian: {
     heading: 'Tienes acceso de Colaborador',
     body: 'Puedes reportar emergencias. Si un organizador te da un código de aval, puedes convertirte en Coordinador.',
     cta: 'Ingresar código de aval',
@@ -18,7 +18,7 @@ const en: typeof es = {
     body: 'The map is visible to everyone. To submit reports, sign in with Google. It only takes a minute.',
     cta: 'Verify identity',
   },
-  colaborador: {
+  civilian: {
     heading: 'You have Collaborator access',
     body: 'You can file emergency reports. If an organizer gives you a vouch code, you can become a Coordinator.',
     cta: 'Enter vouch code',

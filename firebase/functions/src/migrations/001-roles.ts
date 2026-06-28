@@ -13,12 +13,12 @@ import { db } from "../firebase";
 import { assertEmulator } from "../guard";
 
 const ADMIN_MAP: Record<string, string> = {
-  authority: "organizador",
-  command: "organizador",
-  sudo: "fundador",
+  authority: "admin",
+  command: "admin",
+  sudo: "sudo",
 };
 const USER_MAP: Record<string, string> = {
-  responder: "coordinador",
+  responder: "coordinator",
 };
 
 async function migrate(): Promise<void> {

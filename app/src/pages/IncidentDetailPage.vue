@@ -19,7 +19,7 @@ const session = useSessionStore()
 const admin = useAdminStore()
 
 // Responders (field) AND coordinators/command (admin) can manage incidents.
-const canManage = computed(() => session.can('rescatista') || admin.isAdmin)
+const canManage = computed(() => session.can('rescuer') || admin.isAdmin)
 
 const id = computed(() => String(route.params.id))
 const incident = computed(() => store.byId(id.value))
