@@ -14,7 +14,7 @@ export const echoSchema = z.object({
 // Admin-role management (Command only):
 export const adminUserSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["authority", "command", "sudo"]),
+  role: z.enum(["organizador", "fundador"]),
 });
 
 export const adminEmailSchema = z.object({
@@ -25,6 +25,7 @@ export const adminEmailSchema = z.object({
 export const accessRequestSchema = z.object({
   phone: z.string().min(5),
   note: z.string().max(500).optional(),
+  role: z.enum(["rescatista", "coordinador"]).optional(),
 });
 
 const categorySchema = z.enum(["medical", "structural", "obstruction", "resource"]);
@@ -146,4 +147,9 @@ export const inventoryAdjustSchema = z.object({
 
 export const hubCoordinatorSchema = z.object({
   email: z.string().email(),
+});
+
+// Confirmar una necesidad (Workstream 3) — proofUrl opcional (solo un enlace).
+export const needConfirmSchema = z.object({
+  proofUrl: z.string().url().optional(),
 });

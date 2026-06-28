@@ -17,7 +17,7 @@ const admins = ref<AdminUser[]>([])
 const requests = ref<AccessRequest[]>([])
 const reqRole = ref<Record<string, AdminUser['role']>>({})
 const newEmail = ref('')
-const newRole = ref<AdminUser['role']>('authority')
+const newRole = ref<AdminUser['role']>('organizador')
 const cat = ref<AnnouncementCategory>('logistics')
 const msg = ref('')
 const sent = ref(false)
@@ -51,20 +51,20 @@ interface Tab {
   id: string
   label: string
   icon: string
-  role?: 'command' | 'authority'
+  role?: 'organizador' | 'fundador'
 }
 
 const tabs = computed<Tab[]>(() => {
   const list: Tab[] = [
-    { id: 'responder-requests', label: t('admin.tabResponderRequests'), icon: 'person_add', role: 'authority' },
-    { id: 'responders-roster', label: t('admin.tabRespondersRoster'), icon: 'group', role: 'authority' },
+    { id: 'responder-requests', label: t('admin.tabResponderRequests'), icon: 'person_add', role: 'organizador' },
+    { id: 'responders-roster', label: t('admin.tabRespondersRoster'), icon: 'group', role: 'organizador' },
   ]
   if (admin.isCommand) {
-    list.unshift({ id: 'coordinator-requests', label: t('admin.tabCoordinatorRequests'), icon: 'admin_panel_settings', role: 'command' })
+    list.unshift({ id: 'coordinator-requests', label: t('admin.tabCoordinatorRequests'), icon: 'admin_panel_settings', role: 'organizador' })
     list.push(
-      { id: 'coordinators-manage', label: t('admin.tabCoordinatorsManage'), icon: 'shield', role: 'command' },
-      { id: 'announcements', label: t('admin.tabAnnouncements'), icon: 'campaign', role: 'command' },
-      { id: 'audit-log', label: t('admin.tabAuditLog'), icon: 'receipt_long', role: 'command' }
+      { id: 'coordinators-manage', label: t('admin.tabCoordinatorsManage'), icon: 'shield', role: 'organizador' },
+      { id: 'announcements', label: t('admin.tabAnnouncements'), icon: 'campaign', role: 'organizador' },
+      { id: 'audit-log', label: t('admin.tabAuditLog'), icon: 'receipt_long', role: 'organizador' }
     )
   }
   return list
@@ -87,7 +87,7 @@ async function loadTabSpecificData(tab: string) {
     const rq = await admin.listRequests()
     if (rq.ok) {
       requests.value = rq.data.requests
-      for (const x of requests.value) if (!reqRole.value[x.email]) reqRole.value[x.email] = 'authority'
+      for (const x of requests.value) if (!reqRole.value[x.email]) reqRole.value[x.email] = 'organizador'
     }
   } else if (tab === 'coordinators-manage') {
     const u = await admin.listAdmins()
@@ -135,7 +135,7 @@ async function submitRequest() {
 
 // Coordinator approvals
 async function approve(email: string) {
-  const r = await admin.approveRequest(email, reqRole.value[email] ?? 'authority')
+  const r = await admin.approveRequest(email, reqRole.value[email] ?? 'organizador')
   if (r.ok) { await loadTabSpecificData('coordinator-requests'); toast.success(t('common.saved')) }
   else toast.error(r.error || t('common.error'))
 }
@@ -320,7 +320,12 @@ async function removeAlert(id: string) {
                   </div>
                   <div class="text-xs text-slate-400 mt-1">Solicitado: {{ new Date(r.requestedAt).toLocaleString() }}</div>
                 </div>
-                <span class="rounded bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700 uppercase tracking-wider">Brigadista</span>
+                <span 
+                  class="rounded px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider"
+                  :class="r.requestedRole === 'rescatista' ? 'bg-red-50 text-red-700' : 'bg-indigo-50 text-indigo-700'"
+                >
+                  {{ r.requestedRole === 'rescatista' ? 'Rescatista' : 'Coordinador' }}
+                </span>
               </div>
               <p v-if="r.note" class="text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 italic">
                 “{{ r.note }}”
@@ -367,6 +372,7 @@ async function removeAlert(id: string) {
               <thead class="bg-slate-50 text-xs font-bold text-slate-500 uppercase">
                 <tr>
                   <th class="px-4 py-3">{{ t('admin.colName') }}</th>
+                  <th class="px-4 py-3">Rol</th>
                   <th class="px-4 py-3">{{ t('admin.colEmail') }}</th>
                   <th class="px-4 py-3 text-right">{{ t('admin.colActions') }}</th>
                 </tr>
@@ -374,6 +380,14 @@ async function removeAlert(id: string) {
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="resp in filteredResponders" :key="resp.email" class="hover:bg-slate-50/50">
                   <td class="px-4 py-3 font-medium text-slate-900">{{ resp.name || '—' }}</td>
+                  <td class="px-4 py-3 text-xs">
+                    <span 
+                      class="rounded px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider"
+                      :class="resp.role === 'rescatista' ? 'bg-red-50 text-red-700' : 'bg-indigo-50 text-indigo-700'"
+                    >
+                      {{ resp.role === 'rescatista' ? 'Rescatista' : 'Coordinador' }}
+                    </span>
+                  </td>
                   <td class="px-4 py-3 text-slate-600 font-mono text-xs">{{ resp.email }}</td>
                   <td class="px-4 py-3 text-right">
                     <button
@@ -427,9 +441,7 @@ async function removeAlert(id: string) {
               </p>
               <div class="flex flex-wrap items-center gap-3 pt-1">
                 <select v-model="reqRole[r.email]" class="rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white focus:border-indigo-500 focus:outline-none">
-                  <option value="authority">{{ t('admin.roleAuthority') }}</option>
-                  <option value="command">{{ t('admin.roleCommand') }}</option>
-                  <option v-if="admin.isSudo" value="sudo">Sudo</option>
+                  <option value="organizador">{{ t('admin.roleOrganizador') }}</option>
                 </select>
                 <BaseButton @click="approve(r.email)">{{ t('admin.reqApprove') }}</BaseButton>
                 <BaseButton variant="neutral" @click="deny(r.email)">{{ t('admin.reqDeny') }}</BaseButton>
@@ -452,8 +464,8 @@ async function removeAlert(id: string) {
                 <span class="text-sm font-medium text-slate-800 font-mono">{{ u.email }}</span>
                 <span class="flex items-center gap-3">
                   <span class="rounded bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600 uppercase tracking-wider">{{ t('roles.' + u.role) }}</span>
-                  <button v-if="u.role !== 'sudo'" class="text-red-600 hover:text-red-900 p-1" @click="removeAdmin(u.email)"><MaterialIcon name="delete" :size="18" /></button>
-                  <span v-else class="text-slate-400 p-1" title="Sudo user is locked"><MaterialIcon name="lock" :size="18" /></span>
+                  <button v-if="u.role !== 'fundador'" class="text-red-600 hover:text-red-900 p-1" @click="removeAdmin(u.email)"><MaterialIcon name="delete" :size="18" /></button>
+                  <span v-else class="text-slate-400 p-1" title="Fundador (bloqueado)"><MaterialIcon name="lock" :size="18" /></span>
                 </span>
               </li>
             </ul>
@@ -464,9 +476,7 @@ async function removeAlert(id: string) {
             <div class="flex flex-wrap items-center gap-3">
               <input v-model="newEmail" type="email" :placeholder="t('admin.adminsEmailPlaceholder')" class="min-w-[200px] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
               <select v-model="newRole" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
-                <option value="authority">{{ t('admin.roleAuthority') }}</option>
-                <option value="command">{{ t('admin.roleCommand') }}</option>
-                <option v-if="admin.isSudo" value="sudo">Sudo</option>
+                <option value="organizador">{{ t('admin.roleOrganizador') }}</option>
               </select>
               <BaseButton :disabled="!newEmail" @click="addAdmin">{{ t('admin.add') }}</BaseButton>
             </div>

@@ -54,7 +54,7 @@ function isStale(updatedAtStr: string) {
 }
 
 function canManage(hub: ResourceHub) {
-  if (session.can('authority') || admin.isAdmin) return true
+  if (admin.isAdmin) return true // Organizador+ supervisa todas las zonas
   if (hub.createdBy === session.email) return true
   const coords = (hub as any).coordinators
   if (coords && Array.isArray(coords)) {
@@ -72,7 +72,7 @@ function canManage(hub: ResourceHub) {
         <p class="text-sm text-slate-500">{{ t('hubs.subtitle') }}</p>
       </div>
       <RouterLink
-        v-if="session.can('authority') || admin.isAdmin"
+        v-if="session.can('coordinador') || admin.isAdmin"
         to="/hubs/create"
         class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 shadow-sm cursor-pointer"
       >
@@ -89,7 +89,7 @@ function canManage(hub: ResourceHub) {
       </span>
       <p class="text-sm font-medium text-slate-600">{{ t('hubs.noHubs') }}</p>
       <RouterLink
-        v-if="session.can('authority') || admin.isAdmin"
+        v-if="session.can('coordinador') || admin.isAdmin"
         to="/hubs/create"
         class="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 cursor-pointer"
       >

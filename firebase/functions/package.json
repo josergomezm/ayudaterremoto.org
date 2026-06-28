@@ -8,7 +8,8 @@
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
     "deploy": "npm run build && firebase deploy --only functions",
-    "seed": "npm run build && FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 GCLOUD_PROJECT=demo-app node lib/seed.js"
+    "seed": "npm run build && node -e \"process.env.FIRESTORE_EMULATOR_HOST='127.0.0.1:8085'; process.env.GCLOUD_PROJECT='demo-app'; require('./lib/seed.js').main()\" -- seed",
+    "migrate:roles": "npm run build && node -e \"process.env.FIRESTORE_EMULATOR_HOST='127.0.0.1:8085'; process.env.GCLOUD_PROJECT='demo-app'; require('./lib/migrations/001-roles.js')\" -- migrate"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0",

@@ -6,14 +6,17 @@ const props = withDefaults(defineProps<{
   name: string
   size?: number
   label?: string
-}>(), { size: 24 })
-void props
+  fill?: boolean
+}>(), { size: 24, fill: false })
+
+// Material Symbols is a variable font; toggle the FILL axis for solid glyphs.
+const fontVariationSettings = props.fill ? "'FILL' 1, 'wght' 500" : undefined
 </script>
 
 <template>
   <span
     class="material-symbols-outlined select-none leading-none"
-    :style="{ fontSize: size + 'px' }"
+    :style="{ fontSize: size + 'px', fontVariationSettings }"
     :aria-hidden="label ? undefined : true"
     :aria-label="label"
     :role="label ? 'img' : undefined"

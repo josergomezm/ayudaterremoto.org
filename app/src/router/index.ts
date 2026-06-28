@@ -4,13 +4,17 @@ import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'map', component: () => import('../pages/MapPage.vue') },
+    // WS5: el Home es la lista de necesidades (NeedsHomePage).
+    { path: '/', name: 'home', component: () => import('../pages/NeedsHomePage.vue') },
+    { path: '/me', name: 'my-activity', component: () => import('../pages/MyActivityPage.vue') },
+    { path: '/profile', name: 'profile', component: () => import('../pages/ProfilePage.vue') },
+    { path: '/verify', redirect: '/profile' },
+    { path: '/incidents', name: 'incidents', component: () => import('../pages/MapPage.vue') },
     { path: '/incidents/:id', name: 'incident-detail', component: () => import('../pages/IncidentDetailPage.vue') },
     { path: '/report', name: 'report', component: () => import('../pages/ReportPage.vue') },
-    { path: '/verify', name: 'verify', component: () => import('../pages/VerifyPage.vue') },
+    { path: '/people', name: 'people', component: () => import('../pages/PeoplePage.vue') },
     { path: '/alerts', name: 'alerts', component: () => import('../pages/AnnouncementsPage.vue') },
     { path: '/guides', name: 'guides', component: () => import('../pages/GuidesPage.vue') },
-    { path: '/people', name: 'people', component: () => import('../pages/PeoplePage.vue') },
     { path: '/guides/:id', name: 'guide-detail', component: () => import('../pages/GuideDetailPage.vue') },
     { path: '/about', name: 'about', component: () => import('../pages/AboutPage.vue') },
     { path: '/admin', name: 'admin', component: () => import('../pages/AdminPage.vue') },

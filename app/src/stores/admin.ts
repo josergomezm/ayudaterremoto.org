@@ -6,9 +6,9 @@ import { adminFetch } from '../lib/adminApi'
 import type { Role } from './session'
 
 export interface AuditEntry { voucher: string; voucheeDni: string; timestamp: string }
-export interface AdminUser { email: string; role: 'authority' | 'command' | 'sudo' }
+export interface AdminUser { email: string; role: 'organizador' | 'fundador' }
 export interface AccessRequest { email: string; name: string; phone: string; note?: string; requestedAt: string }
-export interface ResponderRequest { email: string; name: string; phone: string; note?: string; requestedAt: string }
+export interface ResponderRequest { email: string; name: string; phone: string; note?: string; requestedAt: string; requestedRole?: 'rescatista' | 'coordinador' }
 export interface Responder { email: string; name?: string; role: string; updatedAt?: string }
 export interface AuditLogEntry {
   action: string
@@ -30,9 +30,10 @@ export const useAdminStore = defineStore('admin', () => {
   const role = ref<Role | null>(null)
   const ready = ref(false)
 
-  const isAdmin = computed(() => role.value === 'authority' || role.value === 'command' || role.value === 'sudo')
-  const isCommand = computed(() => role.value === 'command' || role.value === 'sudo')
-  const isSudo = computed(() => role.value === 'sudo')
+  const isAdmin = computed(() => role.value === 'organizador' || role.value === 'fundador')
+  // Tras la fusión Authority+Command → Organizador, "command" equivale a Organizador+.
+  const isCommand = computed(() => role.value === 'organizador' || role.value === 'fundador')
+  const isSudo = computed(() => role.value === 'fundador')
 
   onAuthStateChanged(auth, async (u) => {
     user.value = u

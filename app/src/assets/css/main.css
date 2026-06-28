@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
 /* Safe-area utilities so the same markup is correct in the browser and inside
    the iOS/Android shells (paired with viewport-fit=cover in index.html). */
 @layer utilities {
@@ -11,6 +15,16 @@
 
 :root {
   color-scheme: light dark;
+  --screen: #F7F5F1;
+  --card: #ffffff;
+  --line: #E7E2D9;
+  --ink: #211F1B;
+  --ink2: #6F685C;
+  --primary: #2350C9;
+  --primary-d: #1B3FA3;
+  --red-c: #B42318;  --red-bg: #FCEDEA;  --red-dot: #E03A2B;
+  --amber-c: #B54708; --amber-bg: #FCF1E1; --amber-dot: #F18C12;
+  --green-c: #15794B; --green-bg: #E9F6EE; --green-dot: #16A866;
 }
 
 html, body, #app {
@@ -19,10 +33,15 @@ html, body, #app {
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #f8fafc;
-  color: #0f172a;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--screen);
+  color: var(--ink);
 }
 
 /* Large default tap targets — users may be stressed, injured, on cracked screens. */
 button { touch-action: manipulation; }
+
+/* Backward compatibility style helper */
+.supply-theme {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}

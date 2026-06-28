@@ -1,6 +1,11 @@
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
+import { assertNotProdInEmulator } from "./guard";
+
+// Anti-production guard: aborta si un emulador local quedó apuntando al proyecto
+// real. Segura en producción desplegada (no hace nada ahí).
+assertNotProdInEmulator();
 
 // One admin app per instance. In the Emulator Suite the admin SDK auto-connects
 // to the Firestore and Auth emulators via the FIRESTORE_EMULATOR_HOST and

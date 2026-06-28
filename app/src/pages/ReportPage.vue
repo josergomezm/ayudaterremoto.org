@@ -104,185 +104,220 @@ async function submit() {
 </script>
 
 <template>
-  <div class="mx-auto  space-y-5 p-4">
-    <h1 class="text-xl font-bold text-slate-900">{{ t('report.title') }}</h1>
+  <div class="supply-theme report-page">
+    <div class="wrap space-y-5">
+      <h1 class="text-xl font-extrabold text-[var(--ink)] tracking-tight">{{ t('report.title') }}</h1>
 
-    <!-- Must be verified to report -->
-    <div v-if="!session.isVerified" class="space-y-3 rounded-xl bg-amber-50 p-4">
-      <p class="text-sm text-amber-900">{{ t('report.needVerify') }}</p>
-      <RouterLink to="/verify"><BaseButton>{{ t('verify.title') }}</BaseButton></RouterLink>
-    </div>
+      <!-- Must be verified to report -->
+      <div v-if="!session.isVerified" class="space-y-3 rounded-2xl bg-[var(--amber-bg)] border border-[var(--line)] p-5">
+        <p class="text-xs text-[var(--amber-c)] font-semibold leading-relaxed">{{ t('report.needVerify') }}</p>
+        <RouterLink to="/profile"><BaseButton block>{{ t('verify.title') }}</BaseButton></RouterLink>
+      </div>
 
-    <!-- Success -->
-    <div v-else-if="result" class="space-y-4 rounded-xl bg-emerald-50 p-4 text-center">
-      <p class="text-lg font-semibold text-emerald-800">
-        {{ result === 'queued' ? t('report.queuedOffline') : t('report.submitted') }}
-      </p>
-      <BaseButton block @click="router.push('/')">{{ t('notFound.goHome') }}</BaseButton>
-    </div>
+      <!-- Success -->
+      <div v-else-if="result" class="space-y-4 rounded-2xl bg-[var(--green-bg)] border border-[var(--line)] p-6 text-center">
+        <p class="text-base font-bold text-[var(--green-c)]">
+          {{ result === 'queued' ? t('report.queuedOffline') : t('report.submitted') }}
+        </p>
+        <BaseButton block @click="router.push('/')">{{ t('notFound.goHome') }}</BaseButton>
+      </div>
 
-    <template v-else>
-      <!-- Step 0 — who -->
-      <section v-if="step === 0" class="space-y-3">
-        <h2 class="font-semibold text-slate-700">{{ t('report.who') }}</h2>
-        <BaseButton block variant="neutral" @click="isProxy = false; step = 1">{{ t('report.self') }}</BaseButton>
-        <BaseButton block variant="neutral" @click="isProxy = true; step = 1">{{ t('report.other') }}</BaseButton>
+      <template v-else>
+        <!-- Step 0 — who -->
+        <section v-if="step === 0" class="space-y-3">
+          <h2 class="text-xs font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('report.who') }}</h2>
+          <BaseButton block variant="neutral" @click="isProxy = false; step = 1">{{ t('report.self') }}</BaseButton>
+          <BaseButton block variant="neutral" @click="isProxy = true; step = 1">{{ t('report.other') }}</BaseButton>
 
-        <!-- Shortcut to the missing-persons flow -->
-        <RouterLink
-          to="/missing"
-          class="mt-2 flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
-        >
-          <MaterialIcon name="person_search" :size="20" /> {{ t('report.missingPersonCta') }}
-        </RouterLink>
-      </section>
+          <!-- Shortcut to the missing-persons flow -->
+          <RouterLink
+            to="/people"
+            class="mt-2 flex items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--line)] bg-white px-4 py-3.5 text-sm font-semibold text-[var(--ink)] hover:bg-[#F6F4EF]"
+          >
+            <MaterialIcon name="person_search" :size="20" class="text-[var(--primary)]" />
+            {{ t('report.missingPersonCta') }}
+          </RouterLink>
+        </section>
 
-      <!-- Step 1 — category -->
-      <section v-else-if="step === 1" class="space-y-3">
-        <h2 class="font-semibold text-slate-700">{{ t('report.category') }}</h2>
-        <BaseButton
-          v-for="c in categories"
-          :key="c"
-          block
-          :variant="category === c ? 'primary' : 'neutral'"
-          @click="category = c; step = 2"
-        >
-          {{ t('category.' + c) }}
-        </BaseButton>
-        <BaseButton block variant="neutral" class="mt-2" @click="step = 0">
-          <span class="inline-flex items-center gap-1"><MaterialIcon name="arrow_back" :size="18" /> {{ t('common.back') }}</span>
-        </BaseButton>
-      </section>
+        <!-- Step 1 — category -->
+        <section v-else-if="step === 1" class="space-y-3">
+          <h2 class="text-xs font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('report.category') }}</h2>
+          <BaseButton
+            v-for="c in categories"
+            :key="c"
+            block
+            :variant="category === c ? 'primary' : 'neutral'"
+            @click="category = c; step = 2"
+          >
+            {{ t('category.' + c) }}
+          </BaseButton>
+          <BaseButton block variant="neutral" class="mt-2" @click="step = 0">
+            <span class="inline-flex items-center gap-1"><MaterialIcon name="arrow_back" :size="18" /> {{ t('common.back') }}</span>
+          </BaseButton>
+        </section>
 
-      <!-- Step 2 — category-specific triage (one question per row, big yes/no) -->
-      <section v-else-if="step === 2" class="space-y-4">
-        <h2 class="font-semibold text-slate-700">{{ t('report.triageTitle') }}</h2>
-        <div v-for="q in questions" :key="q.id" class="space-y-1.5">
-          <p class="text-sm font-medium text-slate-800">{{ t(q.labelKey) }}</p>
+        <!-- Step 2 — category-specific triage (one question per row, big yes/no) -->
+        <section v-else-if="step === 2" class="space-y-4">
+          <h2 class="text-xs font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('report.triageTitle') }}</h2>
+          <div v-for="q in questions" :key="q.id" class="space-y-1.5 p-4 rounded-xl bg-white border border-[var(--line)]">
+            <p class="text-xs font-bold text-[var(--ink)] leading-relaxed">{{ t(q.labelKey) }}</p>
+            <div class="flex gap-2 mt-2">
+              <BaseButton class="flex-1" :variant="answers[q.id] === true ? 'primary' : 'neutral'" @click="answer(q.id, true)">{{ t('common.yes') }}</BaseButton>
+              <BaseButton class="flex-1" :variant="answers[q.id] === false ? 'primary' : 'neutral'" @click="answer(q.id, false)">{{ t('common.no') }}</BaseButton>
+            </div>
+          </div>
+          <div class="flex gap-2 pt-2">
+            <BaseButton variant="neutral" @click="step = 1">
+              <span class="inline-flex items-center gap-1"><MaterialIcon name="arrow_back" :size="18" /> {{ t('common.back') }}</span>
+            </BaseButton>
+            <BaseButton class="flex-1" @click="step = 3">{{ t('common.next') }}</BaseButton>
+          </div>
+        </section>
+
+        <!-- Step 3 — person details (proxy) + location + context -->
+        <section v-else-if="step === 3" class="space-y-4">
+          <!-- Guided person fields when reporting for someone else -->
+          <div v-if="showMissingQuestionnaire" class="space-y-3 card">
+            <h2 class="text-xs font-bold text-[var(--ink2)] uppercase tracking-wider mb-1">{{ t('report.personHeading') }}</h2>
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-[var(--ink)]">{{ t('report.subjectName') }}</label>
+              <input v-model="subjectName" :placeholder="t('report.subjectPlaceholder')" class="input-field" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-[var(--ink)]">{{ t('report.subjectDetails') }}</label>
+              <input v-model="subjectDetails" :placeholder="t('report.subjectDetailsPlaceholder')" class="input-field" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-[var(--ink)]">{{ t('report.lastSeen') }}</label>
+              <input v-model="lastSeen" :placeholder="t('report.lastSeenPlaceholder')" class="input-field" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-[var(--ink)]">{{ t('report.contact') }} <span class="text-slate-400">({{ t('common.optional') }})</span></label>
+              <input v-model="contact" :placeholder="t('report.contactPlaceholder')" class="input-field" />
+            </div>
+            <label class="flex items-center gap-2 text-xs font-bold text-[var(--ink)] pt-1 select-none">
+              <input v-model="asMissing" type="checkbox" class="h-4.5 w-4.5 rounded border-[var(--line)] text-[var(--primary)]" />
+              {{ t('report.asMissing') }}
+            </label>
+          </div>
+
+          <div class="space-y-3">
+            <h2 class="text-xs font-bold text-[var(--ink2)] uppercase tracking-wider">{{ showMissingQuestionnaire ? t('report.lastKnownLocation') : t('report.location') }}</h2>
+            <BaseButton block variant="neutral" :disabled="locating" @click="useMyLocation">
+              <span class="inline-flex items-center justify-center gap-1.5 font-bold">
+                <MaterialIcon :name="locationPrecise && lat !== null ? 'check_circle' : 'my_location'" :size="18" />
+                {{ locating ? t('report.locating') : (lat !== null && locationPrecise ? t('report.pinSet') : t('report.dropPin')) }}
+              </span>
+            </BaseButton>
+
+            <LocationPickerMap
+              :lat="lat"
+              :lng="lng"
+              @update:location="({ lat: newLat, lng: newLng }) => { lat = newLat; lng = newLng; locationPrecise = true }"
+            />
+            <p class="text-[10px] font-semibold text-[var(--ink2)] text-center">
+              {{ t('report.mapInstruction') }}
+            </p>
+          </div>
+
+          <!-- Category-Specific Fields (Gaps Resolution) -->
+          <div v-if="category === 'structural'" class="space-y-1">
+            <label class="text-xs font-bold text-[var(--ink)]">{{ t('category.structuralDamageLabel') }}</label>
+            <select v-model="structuralDamage" class="input-field">
+              <option value="">{{ t('category.selectDamage') }}</option>
+              <option value="minor">{{ t('category.damageValues.minor') }}</option>
+              <option value="moderate">{{ t('category.damageValues.moderate') }}</option>
+              <option value="severe">{{ t('category.damageValues.severe') }}</option>
+              <option value="collapse">{{ t('category.damageValues.collapse') }}</option>
+            </select>
+          </div>
+
+          <div v-if="category === 'resource'" class="space-y-1">
+            <label class="text-xs font-bold text-[var(--ink)]">{{ t('category.resourceTypeLabel') }}</label>
+            <select v-model="resourceType" class="input-field">
+              <option value="">{{ t('category.selectResource') }}</option>
+              <option value="water">{{ t('category.resourceValues.water') }}</option>
+              <option value="food">{{ t('category.resourceValues.food') }}</option>
+              <option value="medical">{{ t('category.resourceValues.medical') }}</option>
+              <option value="shelter">{{ t('category.resourceValues.shelter') }}</option>
+              <option value="tools">{{ t('category.resourceValues.tools') }}</option>
+              <option value="other">{{ t('category.resourceValues.other') }}</option>
+            </select>
+          </div>
+
+          <div v-if="category === 'medical'" class="space-y-1">
+            <label class="text-xs font-bold text-[var(--ink)]">{{ t('category.medicalCountLabel') }}</label>
+            <select v-model="medicalCount" class="input-field">
+              <option value="">{{ t('category.selectCount') }}</option>
+              <option value="1">{{ t('category.medicalCountValues.1') }}</option>
+              <option value="2-5">{{ t('category.medicalCountValues.2-5') }}</option>
+              <option value="6-10">{{ t('category.medicalCountValues.6-10') }}</option>
+              <option value="10+">{{ t('category.medicalCountValues.10+') }}</option>
+            </select>
+          </div>
+
+          <div v-if="category === 'obstruction'" class="space-y-1">
+            <label class="text-xs font-bold text-[var(--ink)]">{{ t('category.obstructionTypeLabel') }}</label>
+            <select v-model="obstructionType" class="input-field">
+              <option value="">{{ t('category.selectObstruction') }}</option>
+              <option value="landslide">{{ t('category.obstructionValues.landslide') }}</option>
+              <option value="debris">{{ t('category.obstructionValues.debris') }}</option>
+              <option value="trees">{{ t('category.obstructionValues.trees') }}</option>
+              <option value="vehicles">{{ t('category.obstructionValues.vehicles') }}</option>
+              <option value="other">{{ t('category.obstructionValues.other') }}</option>
+            </select>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-[var(--ink)]">{{ t('report.unit') }} <span class="text-slate-400">({{ t('common.optional') }})</span></label>
+            <input v-model="unit" :placeholder="t('report.unitPlaceholder')" class="input-field" />
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-[var(--ink)]">{{ t('report.description') }}</label>
+            <textarea v-model="description" :placeholder="t('report.descriptionPlaceholder')" rows="3" class="input-field" />
+          </div>
+
           <div class="flex gap-2">
-            <BaseButton :variant="answers[q.id] === true ? 'primary' : 'neutral'" @click="answer(q.id, true)">{{ t('common.yes') }}</BaseButton>
-            <BaseButton :variant="answers[q.id] === false ? 'primary' : 'neutral'" @click="answer(q.id, false)">{{ t('common.no') }}</BaseButton>
+            <BaseButton variant="neutral" @click="step = 2">
+              <span class="inline-flex items-center gap-1"><MaterialIcon name="arrow_back" :size="18" /> {{ t('common.back') }}</span>
+            </BaseButton>
+            <BaseButton class="flex-1" :disabled="lat === null" @click="submit">{{ t('report.submit') }}</BaseButton>
           </div>
-        </div>
-        <div class="flex gap-2 pt-2">
-          <BaseButton variant="neutral" @click="step = 1">
-            <span class="inline-flex items-center gap-1"><MaterialIcon name="arrow_back" :size="18" /> {{ t('common.back') }}</span>
-          </BaseButton>
-          <BaseButton class="flex-1" @click="step = 3">{{ t('common.next') }}</BaseButton>
-        </div>
-      </section>
-
-      <!-- Step 3 — person details (proxy) + location + context -->
-      <section v-else-if="step === 3" class="space-y-4">
-        <!-- Guided person fields when reporting for someone else (only relevant if someone is trapped/injured or medical) -->
-        <div v-if="showMissingQuestionnaire" class="space-y-3">
-          <h2 class="font-semibold text-slate-700">{{ t('report.personHeading') }}</h2>
-          <div class="space-y-1.5">
-            <label class="text-sm font-medium text-slate-800">{{ t('report.subjectName') }}</label>
-            <input v-model="subjectName" :placeholder="t('report.subjectPlaceholder')" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" />
-          </div>
-          <div class="space-y-1.5">
-            <label class="text-sm font-medium text-slate-800">{{ t('report.subjectDetails') }}</label>
-            <input v-model="subjectDetails" :placeholder="t('report.subjectDetailsPlaceholder')" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" />
-          </div>
-          <div class="space-y-1.5">
-            <label class="text-sm font-medium text-slate-800">{{ t('report.lastSeen') }}</label>
-            <input v-model="lastSeen" :placeholder="t('report.lastSeenPlaceholder')" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" />
-          </div>
-          <div class="space-y-1.5">
-            <label class="text-sm font-medium text-slate-800">{{ t('report.contact') }} <span class="text-slate-400">({{ t('common.optional') }})</span></label>
-            <input v-model="contact" :placeholder="t('report.contactPlaceholder')" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" />
-          </div>
-          <label class="flex items-center gap-2 text-sm font-medium text-slate-800">
-            <input v-model="asMissing" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-            {{ t('report.asMissing') }}
-          </label>
-        </div>
-
-        <div class="space-y-3">
-          <h2 class="font-semibold text-slate-700">{{ showMissingQuestionnaire ? t('report.lastKnownLocation') : t('report.location') }}</h2>
-          <BaseButton block variant="neutral" :disabled="locating" @click="useMyLocation">
-            <span class="inline-flex items-center justify-center gap-1.5">
-              <MaterialIcon :name="locationPrecise && lat !== null ? 'check_circle' : 'my_location'" :size="18" />
-              {{ locating ? t('report.locating') : (lat !== null && locationPrecise ? t('report.pinSet') : t('report.dropPin')) }}
-            </span>
-          </BaseButton>
-
-          <LocationPickerMap
-            :lat="lat"
-            :lng="lng"
-            @update:location="({ lat: newLat, lng: newLng }) => { lat = newLat; lng = newLng; locationPrecise = true }"
-          />
-          <p class="text-xs text-slate-400 text-center">
-            {{ t('report.mapInstruction') }}
-          </p>
-        </div>
-
-        <!-- Category-Specific Fields (Gaps Resolution) -->
-        <div v-if="category === 'structural'" class="space-y-1.5">
-          <label class="text-sm font-medium text-slate-800">{{ t('category.structuralDamageLabel') }}</label>
-          <select v-model="structuralDamage" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 bg-white">
-            <option value="">{{ t('category.selectDamage') }}</option>
-            <option value="minor">{{ t('category.damageValues.minor') }}</option>
-            <option value="moderate">{{ t('category.damageValues.moderate') }}</option>
-            <option value="severe">{{ t('category.damageValues.severe') }}</option>
-            <option value="collapse">{{ t('category.damageValues.collapse') }}</option>
-          </select>
-        </div>
-
-        <div v-if="category === 'resource'" class="space-y-1.5">
-          <label class="text-sm font-medium text-slate-800">{{ t('category.resourceTypeLabel') }}</label>
-          <select v-model="resourceType" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 bg-white">
-            <option value="">{{ t('category.selectResource') }}</option>
-            <option value="water">{{ t('category.resourceValues.water') }}</option>
-            <option value="food">{{ t('category.resourceValues.food') }}</option>
-            <option value="medical">{{ t('category.resourceValues.medical') }}</option>
-            <option value="shelter">{{ t('category.resourceValues.shelter') }}</option>
-            <option value="tools">{{ t('category.resourceValues.tools') }}</option>
-            <option value="other">{{ t('category.resourceValues.other') }}</option>
-          </select>
-        </div>
-
-        <div v-if="category === 'medical'" class="space-y-1.5">
-          <label class="text-sm font-medium text-slate-800">{{ t('category.medicalCountLabel') }}</label>
-          <select v-model="medicalCount" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 bg-white">
-            <option value="">{{ t('category.selectCount') }}</option>
-            <option value="1">{{ t('category.medicalCountValues.1') }}</option>
-            <option value="2-5">{{ t('category.medicalCountValues.2-5') }}</option>
-            <option value="6-10">{{ t('category.medicalCountValues.6-10') }}</option>
-            <option value="10+">{{ t('category.medicalCountValues.10+') }}</option>
-          </select>
-        </div>
-
-        <div v-if="category === 'obstruction'" class="space-y-1.5">
-          <label class="text-sm font-medium text-slate-800">{{ t('category.obstructionTypeLabel') }}</label>
-          <select v-model="obstructionType" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 bg-white">
-            <option value="">{{ t('category.selectObstruction') }}</option>
-            <option value="landslide">{{ t('category.obstructionValues.landslide') }}</option>
-            <option value="debris">{{ t('category.obstructionValues.debris') }}</option>
-            <option value="trees">{{ t('category.obstructionValues.trees') }}</option>
-            <option value="vehicles">{{ t('category.obstructionValues.vehicles') }}</option>
-            <option value="other">{{ t('category.obstructionValues.other') }}</option>
-          </select>
-        </div>
-
-        <div class="space-y-1.5">
-          <label class="text-sm font-medium text-slate-800">{{ t('report.unit') }} <span class="text-slate-400">({{ t('common.optional') }})</span></label>
-          <input v-model="unit" :placeholder="t('report.unitPlaceholder')" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" />
-        </div>
-
-        <div class="space-y-1.5">
-          <label class="text-sm font-medium text-slate-800">{{ t('report.description') }}</label>
-          <textarea v-model="description" :placeholder="t('report.descriptionPlaceholder')" rows="3" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" />
-        </div>
-
-        <div class="flex gap-2">
-          <BaseButton variant="neutral" @click="step = 2">
-            <span class="inline-flex items-center gap-1"><MaterialIcon name="arrow_back" :size="18" /> {{ t('common.back') }}</span>
-          </BaseButton>
-          <BaseButton class="flex-1" :disabled="lat === null" @click="submit">{{ t('report.submit') }}</BaseButton>
-        </div>
-      </section>
-    </template>
+        </section>
+      </template>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.report-page {
+  background: var(--screen);
+  min-height: 100%;
+  padding-bottom: 40px;
+}
+.wrap {
+  margin: 0 auto;
+  padding: 12px 16px 24px;
+}
+.card {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  padding: 18px;
+}
+.input-field {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  outline: none;
+}
+.input-field:focus {
+  border-color: var(--primary);
+}
+</style>

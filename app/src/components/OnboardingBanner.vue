@@ -13,8 +13,8 @@ const dismissed = ref(false)
 
 const variant = computed(() => {
   if (!session.isVerified) return 'unverified'
-  if (session.role === 'civilian') return 'civilian'
-  return null // responder and above: no banner
+  if (session.role === 'colaborador') return 'colaborador'
+  return null // coordinador and above: no banner
 })
 
 const config = computed(() => {

@@ -1,17 +1,17 @@
 const es = {
   unverified: 'Sin verificar',
-  civilian: 'Civil',
-  responder: 'Brigadista',
-  authority: 'Autoridad',
-  command: 'Comando',
+  colaborador: 'Colaborador',
+  coordinador: 'Coordinador',
+  organizador: 'Organizador',
+  fundador: 'Fundador',
 }
 
 const en: typeof es = {
   unverified: 'Not verified',
-  civilian: 'Civilian',
-  responder: 'Responder',
-  authority: 'Authority',
-  command: 'Command',
+  colaborador: 'Collaborator',
+  coordinador: 'Coordinator',
+  organizador: 'Organizer',
+  fundador: 'Founder',
 }
 
 export default { es, en }

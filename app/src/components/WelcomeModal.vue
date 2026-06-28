@@ -39,11 +39,11 @@ const tabs = computed(() => [
 
 // Slide 3 roles data
 const roles = computed(() => [
-  { key: 'unverified', icon: 'person',           color: 'text-slate-400', bg: 'bg-slate-100' },
-  { key: 'civilian',   icon: 'person_check',      color: 'text-blue-600',  bg: 'bg-blue-50'   },
-  { key: 'responder',  icon: 'emergency_home',    color: 'text-amber-600', bg: 'bg-amber-50'  },
-  { key: 'authority',  icon: 'badge',             color: 'text-indigo-600',bg: 'bg-indigo-50' },
-  { key: 'command',    icon: 'military_tech',     color: 'text-rose-600',  bg: 'bg-rose-50'   },
+  { key: 'unverified',  icon: 'person',           color: 'text-slate-400', bg: 'bg-slate-100' },
+  { key: 'colaborador', icon: 'person_check',     color: 'text-blue-600',  bg: 'bg-blue-50'   },
+  { key: 'coordinador', icon: 'emergency_home',   color: 'text-amber-600', bg: 'bg-amber-50'  },
+  { key: 'organizador', icon: 'badge',            color: 'text-indigo-600',bg: 'bg-indigo-50' },
+  { key: 'fundador',    icon: 'military_tech',    color: 'text-rose-600',  bg: 'bg-rose-50'   },
 ])
 
 const slide3Roles = tm('welcome.slide3.roles') as Record<string, { name: string; desc: string }>
@@ -147,7 +147,7 @@ const slide2Tabs  = tm('welcome.slide2.tabs')  as Record<string, { title: string
               {{ t('welcome.slide3_hubs.coordBody') }}
             </p>
             <a 
-              href="https://wa.me/584120000000?text=Hola,%20quiero%20ayudar%20a%20coordinar%20un%20centro%20de%20acopio" 
+              href="https://wa.me/584120000000?text=Hola,%20quiero%20ayudar%20a%20coordinar%20una%20zona"
               target="_blank" 
               class="inline-flex items-center gap-1 text-xs font-bold text-indigo-950 underline underline-offset-2 hover:text-indigo-700"
             >
