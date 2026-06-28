@@ -30,3 +30,7 @@ dist/
 # you start customizing native code and want it tracked in git.
 app/ios/
 app/android/
+
+# Build outputs and cache
+firebase/functions/lib/
+*.tsbuildinfo
