@@ -1,7 +1,7 @@
 {
   "name": "ayudaterremoto-functions",
   "description": "Cloud Functions API for the Ayuda Terremoto crisis-response app",
-  "engines": { "node": "20" },
+  "engines": { "node": "22" },
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",
