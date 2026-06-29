@@ -26,8 +26,10 @@ const search = ref('')
 const fUrgency = ref('')
 const fCategory = ref('')
 const fZone = ref('')
+const fHubType = ref<'all' | 'static' | 'mobile'>('all')
 const openOnly = ref(true)
 const view = ref<'list' | 'map'>('list')
+const activeTab = ref<'my-zone' | 'global'>('my-zone')
 
 const URGENCY_RANK: Record<string, number> = { depleted: 0, low: 1, available: 2 }
 const CATEGORIES = ['water', 'food', 'medical', 'tools', 'shelter', 'clothing', 'hygiene', 'other']
@@ -56,6 +58,7 @@ const filtered = computed<Need[]>(() => {
       if (fUrgency.value && item.urgency !== fUrgency.value) return false
       if (fCategory.value && item.category !== fCategory.value) return false
       if (fZone.value && hub.id !== fZone.value) return false
+      if (fHubType.value !== 'all' && (hub.hubType || 'static') !== fHubType.value) return false
       if (q && !(`${item.name} ${hub.name}`.toLowerCase().includes(q))) return false
       return true
     })
@@ -81,7 +84,7 @@ const zoneStale = computed(() => {
   return diff > 2 * 60 * 60 * 1000
 })
 
-function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value = ''; search.value = '' }
+function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value = ''; search.value = ''; fHubType.value = 'all' }
 </script>
 
 <template>
@@ -89,8 +92,26 @@ function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value
     <Loader v-if="hubs.loading && hubs.hubs.length === 0" :label="t('common.loading')" />
 
     <template v-else>
+      <!-- Tab selector for Coordinators -->
+      <div v-if="myZone" class="tabs">
+        <button 
+          class="tab-btn"
+          :class="activeTab === 'my-zone' ? 'active-tab' : 'inactive-tab'"
+          @click="activeTab = 'my-zone'"
+        >
+          Mi Centro / Brigada
+        </button>
+        <button 
+          class="tab-btn"
+          :class="activeTab === 'global' ? 'active-tab' : 'inactive-tab'"
+          @click="activeTab = 'global'"
+        >
+          Necesidades Globales
+        </button>
+      </div>
+
       <!-- ───────── Vista Coordinador: Mi zona ───────── -->
-      <div v-if="myZone" class="wrap">
+      <div v-if="myZone && activeTab === 'my-zone'" class="wrap">
         <div class="myzone">
           <div class="myzone-top">
             <div>
@@ -135,6 +156,14 @@ function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value
           <button class="chip" :class="{ 'chip--on': openOnly }" @click="openOnly = !openOnly">
             <MaterialIcon v-if="openOnly" name="check" :size="17" /> {{ t('home.onlyOpen') }}
           </button>
+          <label class="chip chip--select">
+            <select v-model="fHubType">
+              <option value="all">{{ t('hubs.filterHubTypeAll') }}</option>
+              <option value="static">{{ t('hubs.filterHubTypeStatic') }}</option>
+              <option value="mobile">{{ t('hubs.filterHubTypeMobile') }}</option>
+            </select>
+            <MaterialIcon name="expand_more" :size="18" />
+          </label>
           <label class="chip chip--select">
             <select v-model="fUrgency">
               <option value="">{{ t('home.urgency') }}</option>
@@ -263,4 +292,11 @@ function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value
 .btn-primary:hover { background: var(--primary-d); }
 .btn-ghost { margin-top: 22px; height: 52px; padding: 0 24px; border: 1.5px solid var(--line); border-radius: 14px; background: #fff; color: var(--ink); font-size: 15.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
 .btn-ghost:hover { background: #F6F4EF; }
+
+/* Tabs container & items (WS6) */
+.tabs { display: flex; border-bottom: 1px solid var(--line); background: #fff; padding: 0 16px; margin-bottom: 8px; }
+.tab-btn { padding: 14px 16px; font-size: 14px; font-weight: 700; border: none; background: transparent; border-bottom: 2.5px solid transparent; cursor: pointer; color: var(--ink2); transition: all 0.2s; font-family: inherit; }
+.tab-btn:hover { color: var(--ink); }
+.active-tab { border-bottom-color: var(--primary); color: var(--primary); font-weight: 800; }
+.inactive-tab { color: var(--ink2); }
 </style>

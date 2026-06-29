@@ -63,7 +63,9 @@ export async function seedSupplyDemo(): Promise<void> {
     phone: "+58 414 7778899",
     note: "Coordinadora de la brigada de recolección en Petare.",
     requestedRole: "coordinator",
-    requestedAt: now
+    requestedAt: now,
+    requestedHubId: "zona-catia",
+    requestedHubName: "Refugio Catia La Mar"
   });
   await db.doc("responderRequests/solicitud.rescatista@demo.com").set({
     email: "solicitud.rescatista@demo.com",
@@ -71,12 +73,14 @@ export async function seedSupplyDemo(): Promise<void> {
     phone: "+58 412 9991122",
     note: "Paramédico y socorrista de Protección Civil.",
     requestedRole: "rescuer",
-    requestedAt: now
+    requestedAt: now,
+    requestedHubId: "zona-maiquetia",
+    requestedHubName: "Brigada Móvil Maiquetía"
   });
-
+ 
   const zones = [
-    { id: "zona-catia", name: "Refugio Catia La Mar", address: "Av. Soublette, Catia La Mar", lat: 10.5980, lng: -67.0220, createdBy: "maria@demo.com", contactName: "María González" },
-    { id: "zona-maiquetia", name: "Punto Maiquetía", address: "Calle Real de Maiquetía", lat: 10.5970, lng: -66.9800, createdBy: "carlos@demo.com", contactName: "Carlos Pérez" },
+    { id: "zona-catia", name: "Refugio Catia La Mar", address: "Av. Soublette, Catia La Mar", lat: 10.5980, lng: -67.0220, createdBy: "maria@demo.com", contactName: "María González", hubType: "static" },
+    { id: "zona-maiquetia", name: "Brigada Móvil Maiquetía", address: "Calle Real de Maiquetía", lat: 10.5970, lng: -66.9800, createdBy: "carlos@demo.com", contactName: "Carlos Pérez", hubType: "mobile" },
   ];
   for (const z of zones) {
     await db.doc(`resourceHubs/${z.id}`).set({
@@ -84,6 +88,7 @@ export async function seedSupplyDemo(): Promise<void> {
       contactPhone: "+58 412 1112233", contactName: z.contactName,
       whatsappGroup: "https://chat.whatsapp.com/demo",
       status: "active", createdBy: z.createdBy, createdAt: now, updatedAt: now,
+      hubType: z.hubType,
     });
   }
 

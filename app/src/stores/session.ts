@@ -12,6 +12,10 @@ export const useSessionStore = defineStore('session', () => {
   const role = ref<Role | null>(null)
   const name = ref<string | null>(null)
   const email = ref<string | null>(null)
+  const brigade = ref<string | null>(null)
+  const brigadeRole = ref<string | null>(null)
+  const joinedHubId = ref<string | null>(null)
+  const joinedHubName = ref<string | null>(null)
   const ready = ref(false)
 
   const isVerified = computed(() => user.value !== null)
@@ -20,11 +24,11 @@ export const useSessionStore = defineStore('session', () => {
     return role.value !== null && RANK[role.value] >= RANK[min]
   }
 
-  async function fetchProfile(): Promise<{ role: Role; name: string; email: string } | null> {
+  async function fetchProfile(): Promise<{ role: Role; name: string; email: string; brigade?: string; brigadeRole?: string; joinedHubId?: string; joinedHubName?: string } | null> {
     const fbUser = auth.currentUser
     if (!fbUser) return null
     const token = await fbUser.getIdToken()
-    const res = await apiFetch<{ role: Role; name: string; email: string }>('/auth/me', {
+    const res = await apiFetch<{ role: Role; name: string; email: string; brigade?: string; brigadeRole?: string; joinedHubId?: string; joinedHubName?: string }>('/auth/me', {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -41,16 +45,28 @@ export const useSessionStore = defineStore('session', () => {
         role.value = profile.role
         name.value = profile.name
         email.value = profile.email
+        brigade.value = profile.brigade || null
+        brigadeRole.value = profile.brigadeRole || null
+        joinedHubId.value = profile.joinedHubId || null
+        joinedHubName.value = profile.joinedHubName || null
       } else {
         // Fallback profile if server is not responding yet
         role.value = 'civilian'
         name.value = u.displayName || u.email || 'Google User'
         email.value = u.email
+        brigade.value = null
+        brigadeRole.value = null
+        joinedHubId.value = null
+        joinedHubName.value = null
       }
     } else {
       role.value = null
       name.value = null
       email.value = null
+      brigade.value = null
+      brigadeRole.value = null
+      joinedHubId.value = null
+      joinedHubName.value = null
     }
     ready.value = true
   })
@@ -62,6 +78,10 @@ export const useSessionStore = defineStore('session', () => {
       role.value = profile.role
       name.value = profile.name
       email.value = profile.email
+      brigade.value = profile.brigade || null
+      brigadeRole.value = profile.brigadeRole || null
+      joinedHubId.value = profile.joinedHubId || null
+      joinedHubName.value = profile.joinedHubName || null
     }
   }
 
@@ -70,6 +90,8 @@ export const useSessionStore = defineStore('session', () => {
     role.value = null
     name.value = null
     email.value = null
+    brigade.value = null
+    brigadeRole.value = null
   }
 
   async function redeemVouch(code: string): Promise<{ ok: boolean; error?: string }> {
@@ -90,7 +112,7 @@ export const useSessionStore = defineStore('session', () => {
     return { ok: false, error: res.error }
   }
 
-  async function requestResponder(phone: string, note: string, role?: 'rescuer' | 'coordinator'): Promise<{ ok: boolean; error?: string }> {
+  async function requestResponder(phone: string, note: string, requestedRole?: 'rescuer' | 'coordinator', requestedBrigade?: string, requestedBrigadeRole?: string, requestedHubId?: string | null, requestedHubName?: string | null): Promise<{ ok: boolean; error?: string }> {
     const fbUser = auth.currentUser
     if (!fbUser) return { ok: false, error: 'Inicie sesión primero' }
     const token = await fbUser.getIdToken()
@@ -99,7 +121,7 @@ export const useSessionStore = defineStore('session', () => {
       headers: {
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ phone, note, role }),
+      body: JSON.stringify({ phone, note, role: requestedRole, brigade: requestedBrigade, brigadeRole: requestedBrigadeRole, hubId: requestedHubId, hubName: requestedHubName }),
     })
     if (res.ok) return { ok: true }
     return { ok: false, error: res.error }
@@ -119,5 +141,27 @@ export const useSessionStore = defineStore('session', () => {
     return { ok: false, status: null, error: res.error }
   }
 
-  return { user, role, name, email, ready, isVerified, can, signIn, signOut, redeemVouch, requestResponder, checkResponderRequest }
+  async function updateBrigadeInfo(newBrigade: string, newBrigadeRole: string): Promise<{ ok: boolean; error?: string }> {
+    const fbUser = auth.currentUser
+    if (!fbUser) return { ok: false, error: 'Inicie sesión primero' }
+    const token = await fbUser.getIdToken()
+    const res = await apiFetch<{ ok: boolean; brigade: string | null; brigadeRole: string | null }>('/profile/update-brigade', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ brigade: newBrigade, brigadeRole: newBrigadeRole }),
+    })
+    if (res.ok) {
+      brigade.value = res.data.brigade
+      brigadeRole.value = res.data.brigadeRole
+      return { ok: true }
+    }
+    return { ok: false, error: res.error }
+  }
+
+  return {
+    user, role, name, email, brigade, brigadeRole, joinedHubId, joinedHubName, ready, isVerified, can,
+    signIn, signOut, redeemVouch, requestResponder, checkResponderRequest, updateBrigadeInfo
+  }
 })

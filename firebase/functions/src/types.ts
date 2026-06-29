@@ -45,6 +45,10 @@ export interface ResponderRequest {
   note?: string;
   requestedAt: string;
   requestedRole?: "rescuer" | "coordinator";
+  brigade?: string;
+  brigadeRole?: string;
+  requestedHubId?: string | null;
+  requestedHubName?: string | null;
 }
 
 export interface Incident {
@@ -78,6 +82,25 @@ export interface Incident {
   resourceType?: "water" | "food" | "medical" | "shelter" | "tools" | "other";
   medicalCount?: "1" | "2-5" | "6-10" | "10+";
   obstructionType?: "landslide" | "debris" | "trees" | "vehicles" | "other";
+  // Incident Assignment & Status Flow
+  assignedTo?: string | null;
+  assignedName?: string | null;
+  assignedBrigade?: string | null;
+  assignmentStatus?: "unassigned" | "assigned" | "en_route" | "on_site" | "handling" | "resolved" | "evacuated";
+  assignmentEta?: string | null;
+  assignmentNotes?: string | null;
+  // 72-Hour Control & Re-verification
+  lastReverifiedAt?: string | null;
+  reverifiedBy?: string | null;
+  reverificationNotes?: string | null;
+  // Outcome / Closure Report
+  outcomeSurvivors?: number;
+  outcomeDeceased?: number;
+  outcomeInjured?: number;
+  outcomeStructuralDamage?: "none" | "minor" | "moderate" | "severe" | "collapse";
+  outcomeDetails?: string;
+  outcomeSubmittedAt?: string;
+  outcomeSubmittedBy?: string;
 }
 
 export interface MissingPerson {
@@ -159,6 +182,9 @@ export interface ResourceHub {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  hubType?: "static" | "mobile";
+  offersShelter?: boolean;
+  shelterCapacity?: number;
 }
 
 export interface InventoryItem {

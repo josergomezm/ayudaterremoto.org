@@ -92,6 +92,24 @@ const es = {
   needConfirmed: 'Llegada confirmada.',
   needReopened: 'Necesidad reabierta.',
   promptEta: '¿Cuándo estimas entregar esta ayuda? (Ej: 2 horas, Esta tarde, Mañana)',
+  // Hub types (Static vs. Mobile)
+  hubTypeLabel: 'Tipo de Nodo / Centro',
+  hubTypeStatic: 'Centro de Acopio (Fijo)',
+  hubTypeMobile: 'Brigada Móvil / Equipo de Rescate',
+  hubTypeStaticDesc: 'Punto físico establecido para recibir y almacenar donaciones.',
+  hubTypeMobileDesc: 'Equipo de rescate en el terreno que publica sus necesidades operativas.',
+  filterHubTypeAll: 'Todos los Centros',
+  filterHubTypeStatic: 'Centros de Acopio',
+  filterHubTypeMobile: 'Brigadas de Rescate',
+  titleMobile: 'Directorio de Brigadas',
+  subtitleMobile: 'Unidades y equipos de respuesta verificado desplegados en el terreno.',
+  noBrigades: 'No hay brigadas de rescate registradas aún.',
+  activeRescuers: 'Rescatistas Activos',
+  brigadeRoster: 'Miembros de la Brigada',
+  viewRoster: 'Ver Roster y Operaciones',
+  activeOps: 'Operaciones Activas',
+  opsClaimed: '{count} incidentes asignados',
+  backToBrigades: 'Volver a Brigadas',
 }
 
 const en: typeof es = {
@@ -188,6 +206,24 @@ const en: typeof es = {
   needConfirmed: 'Arrival confirmed.',
   needReopened: 'Need reopened.',
   promptEta: 'When do you estimate delivering this supply? (E.g., 2 hours, This afternoon, Tomorrow)',
+  // Hub types (Static vs. Mobile)
+  hubTypeLabel: 'Node / Center Type',
+  hubTypeStatic: 'Supply Center (Static)',
+  hubTypeMobile: 'Mobile Brigade / Rescue Team',
+  hubTypeStaticDesc: 'Physical location established to receive and store donations.',
+  hubTypeMobileDesc: 'Rescue team on the ground broadcasting active operational needs.',
+  filterHubTypeAll: 'All Centers',
+  filterHubTypeStatic: 'Supply Centers',
+  filterHubTypeMobile: 'Rescue Brigades',
+  titleMobile: 'Brigades Directory',
+  subtitleMobile: 'Verified rescue teams and units deployed on the ground.',
+  noBrigades: 'No rescue brigades registered yet.',
+  activeRescuers: 'Active Rescuers',
+  brigadeRoster: 'Brigade Members',
+  viewRoster: 'View Roster & Operations',
+  activeOps: 'Active Operations',
+  opsClaimed: '{count} assigned incidents',
+  backToBrigades: 'Back to Brigades',
 }
 
 export default { es, en }

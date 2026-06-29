@@ -41,6 +41,8 @@ export interface HubLog {
 export interface HubCoordinator {
   email: string
   addedAt: string
+  name?: string
+  addedBy?: string
 }
 
 export interface ResourceHub {
@@ -59,6 +61,9 @@ export interface ResourceHub {
   inventory: InventoryItem[]
   recentLogs: HubLog[]
   coordinators?: HubCoordinator[]
+  hubType?: 'static' | 'mobile'
+  offersShelter?: boolean
+  shelterCapacity?: number
 }
 
 export interface HubCreatePayload {
@@ -69,6 +74,9 @@ export interface HubCreatePayload {
   contactPhone: string
   contactName: string
   whatsappGroup?: string
+  hubType?: 'static' | 'mobile'
+  offersShelter?: boolean
+  shelterCapacity?: number
 }
 
 export interface HubUpdatePayload {
@@ -78,6 +86,9 @@ export interface HubUpdatePayload {
   contactName?: string
   whatsappGroup?: string
   status?: 'active' | 'closed'
+  hubType?: 'static' | 'mobile'
+  offersShelter?: boolean
+  shelterCapacity?: number
 }
 
 export interface InventoryUpsertPayload {

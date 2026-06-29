@@ -39,6 +39,19 @@ const es = {
   coordinadorDesc: 'Coordinador de centro. Puede gestionar el inventario y necesidades de su centro, confirmar la llegada de suministros entregados por voluntarios y resolver reportes locales.',
   organizadorDesc: 'Administrador de operaciones. Puede crear centros de suministro, aprobar solicitudes de nuevos coordinadores/rescatistas y gestionar el personal de respuesta.',
   fundadorDesc: 'Administrador fundador (Sudo). Control total del sistema y auditoría general.',
+  // Brigade Hierarchy
+  brigadeLabel: 'Brigada / Organización',
+  brigadePlaceholder: 'Ej: Bomberos Voluntarios, Cruz Roja...',
+  brigadeRoleLabel: 'Rol / Rango en Brigada',
+  brigadeRoleOptionLeader: 'Líder de Brigada',
+  brigadeRoleOptionRescuer: 'Rescatista de Campo',
+  brigadeRoleOptionSpecialist: 'Especialista / Técnico',
+  brigadeSettingsTitle: 'Configuración de Brigada',
+  saveBrigadeButton: 'Guardar Información',
+  brigadeSaveSuccess: 'Información de brigada actualizada correctamente.',
+  brigadeSaveError: 'Error al actualizar información de brigada.',
+  requestHubLabel: 'Centro o Brigada que desea unirse (Opcional)',
+  requestHubPlaceholder: '-- Ninguno (Petición Global) --',
 }
 
 const en: typeof es = {
@@ -82,6 +95,19 @@ const en: typeof es = {
   coordinadorDesc: 'Hub coordinator. Can manage center inventory and local needs, confirm arrival of supplies delivered by volunteers, and resolve local reports.',
   organizadorDesc: 'Operations administrator. Can create supply centers, approve new coordinators/rescuers, and manage response personnel.',
   fundadorDesc: 'Founding administrator (Sudo). Full system control and general audit access.',
+  // Brigade Hierarchy
+  brigadeLabel: 'Brigade / Organization',
+  brigadePlaceholder: 'E.g., Volunteer Firefighters, Red Cross...',
+  brigadeRoleLabel: 'Brigade Role / Rank',
+  brigadeRoleOptionLeader: 'Brigade Leader',
+  brigadeRoleOptionRescuer: 'Field Rescuer',
+  brigadeRoleOptionSpecialist: 'Specialist / Technician',
+  brigadeSettingsTitle: 'Brigade Configuration',
+  saveBrigadeButton: 'Save Information',
+  brigadeSaveSuccess: 'Brigade information successfully updated.',
+  brigadeSaveError: 'Error updating brigade information.',
+  requestHubLabel: 'Hub or Brigade to join (Optional)',
+  requestHubPlaceholder: '-- None (Global Request) --',
 }
 
 export default { es, en }

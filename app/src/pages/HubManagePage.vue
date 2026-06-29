@@ -31,7 +31,7 @@ const coordinators = computed(() => {
 
 const hasAccess = computed(() => {
   if (!session.ready) return true // Show loader, don't block immediately
-  if (admin.isAdmin) return true // Organizador+ supervisa todas las zonas
+  if (admin.isAdmin || session.can('admin')) return true // Organizador+ supervisa todas las zonas
   if (hub.value) {
     if (hub.value.createdBy === session.email) return true
     return coordinators.value.some((c: any) => c.email === session.email)
@@ -46,7 +46,9 @@ const editForm = ref({
   contactName: '',
   contactPhone: '',
   whatsappGroup: '',
-  status: 'active' as 'active' | 'closed'
+  status: 'active' as 'active' | 'closed',
+  offersShelter: false,
+  shelterCapacity: null as number | null
 })
 
 watch(hub, (newHub) => {
@@ -57,7 +59,9 @@ watch(hub, (newHub) => {
       contactName: newHub.contactName,
       contactPhone: newHub.contactPhone,
       whatsappGroup: newHub.whatsappGroup || '',
-      status: newHub.status
+      status: newHub.status,
+      offersShelter: newHub.offersShelter || false,
+      shelterCapacity: newHub.shelterCapacity !== undefined ? newHub.shelterCapacity : null
     }
   }
 }, { immediate: true })
@@ -119,7 +123,9 @@ async function onSaveDetails() {
     contactName: editForm.value.contactName.trim(),
     contactPhone: editForm.value.contactPhone.trim(),
     whatsappGroup: editForm.value.whatsappGroup.trim() || undefined,
-    status: editForm.value.status
+    status: editForm.value.status,
+    offersShelter: hub.value?.hubType === 'static' ? editForm.value.offersShelter : false,
+    shelterCapacity: (hub.value?.hubType === 'static' && editForm.value.offersShelter) ? (Number(editForm.value.shelterCapacity) || 0) : 0
   })
   updatingDetails.value = false
   if (res.ok) {
@@ -536,6 +542,33 @@ async function onRemoveCoordinator(email: string) {
                   v-model="editForm.whatsappGroup"
                   type="url"
                   :placeholder="t('hubs.whatsappGroupPlaceholder')"
+                  class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
+              </div>
+            </div>
+
+            <!-- Shelter section (only for static hubs) -->
+            <div v-if="hub?.hubType === 'static'" class="space-y-4 pt-3 border-t border-slate-100 mt-2">
+              <div class="flex items-center gap-2">
+                <input 
+                  v-model="editForm.offersShelter"
+                  type="checkbox" 
+                  id="edit-offers-shelter" 
+                  class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer"
+                />
+                <label for="edit-offers-shelter" class="text-sm font-semibold text-slate-700 cursor-pointer">
+                  Ofrece refugio / lugar para dormir
+                </label>
+              </div>
+
+              <div v-if="editForm.offersShelter" class="space-y-1.5 max-w-xs">
+                <label class="text-sm font-semibold text-slate-700">Plazas / Camas disponibles</label>
+                <input 
+                  v-model.number="editForm.shelterCapacity"
+                  type="number" 
+                  min="0"
+                  required
+                  placeholder="ej. 15"
                   class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"
                 />
               </div>

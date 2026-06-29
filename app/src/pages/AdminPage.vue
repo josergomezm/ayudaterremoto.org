@@ -109,9 +109,9 @@ watch(activeTab, (tab) => {
   }
 })
 
-// When signed in but not an admin, surface any existing pending request.
-watch(() => [admin.ready, !!admin.user, admin.isAdmin], async () => {
-  if (admin.ready && admin.user && !admin.isAdmin) {
+// When signed in but not authorized as admin/coordinator, surface any existing pending request.
+watch(() => [admin.ready, !!admin.user, admin.isAdmin, admin.role], async () => {
+  if (admin.ready && admin.user && !admin.isAdmin && admin.role !== 'coordinator') {
     const r = await admin.myRequest()
     requestStatus.value = r.ok ? r.data.status : null
   }
@@ -120,7 +120,7 @@ watch(() => [admin.ready, !!admin.user, admin.isAdmin], async () => {
 async function signIn() {
   try {
     await admin.signIn()
-    if (admin.user && !admin.isAdmin) toast.info(t('admin.noAccessBody'))
+    if (admin.user && !admin.isAdmin && admin.role !== 'coordinator') toast.info(t('admin.noAccessBody'))
   } catch (e) {
     toast.error(e instanceof Error ? e.message : t('common.error'))
   }
@@ -195,7 +195,7 @@ async function removeAlert(id: string) {
         <h1 class="text-2xl font-bold text-slate-900">{{ t('admin.title') }}</h1>
         <p class="text-sm text-slate-600">{{ t('admin.subtitle') }}</p>
       </div>
-      <div v-if="admin.ready && admin.user && admin.isAdmin" class="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-2xl ring-1 ring-slate-200">
+      <div v-if="admin.ready && admin.user && (admin.isAdmin || admin.role === 'coordinator')" class="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-2xl ring-1 ring-slate-200">
         <div class="text-xs text-slate-700">
           <span class="font-semibold block truncate max-w-[200px]" :title="admin.user?.email || ''">{{ admin.user?.email }}</span>
           <span class="rounded bg-indigo-50 px-1 py-0.5 text-[10px] font-bold text-indigo-700 uppercase tracking-wider">{{ t('roles.' + admin.role) }}</span>
@@ -220,8 +220,8 @@ async function removeAlert(id: string) {
       </BaseButton>
     </div>
 
-    <!-- Signed in but no admin role → request coordinator access -->
-    <div v-else-if="!admin.isAdmin" class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 max-w-lg mx-auto">
+    <!-- Signed in but no admin/coordinator role → request coordinator access -->
+    <div v-else-if="!admin.isAdmin && admin.role !== 'coordinator'" class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 max-w-lg mx-auto">
       <div class="flex items-start gap-4">
         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600">
           <MaterialIcon name="warning" :size="22" />
@@ -318,6 +318,13 @@ async function removeAlert(id: string) {
                       <span>{{ t('admin.chatWhatsApp') }}</span>
                     </a>
                   </div>
+                  <div v-if="r.brigade" class="text-xs text-slate-700 font-semibold mt-1">
+                    🏢 Brigada: {{ r.brigade }} <span v-if="r.brigadeRole" class="text-slate-500 font-normal">({{ r.brigadeRole }})</span>
+                  </div>
+                  <div v-if="r.requestedHubName" class="text-xs text-indigo-600 font-semibold mt-1 flex items-center gap-1">
+                    <MaterialIcon name="place" :size="14" />
+                    <span>Centro/Brigada: {{ r.requestedHubName }}</span>
+                  </div>
                   <div class="text-xs text-slate-400 mt-1">Solicitado: {{ new Date(r.requestedAt).toLocaleString() }}</div>
                 </div>
                 <span 
@@ -373,6 +380,7 @@ async function removeAlert(id: string) {
                 <tr>
                   <th class="px-4 py-3">{{ t('admin.colName') }}</th>
                   <th class="px-4 py-3">Rol</th>
+                  <th class="px-4 py-3">{{ t('admin.colBrigade') }}</th>
                   <th class="px-4 py-3">{{ t('admin.colEmail') }}</th>
                   <th class="px-4 py-3 text-right">{{ t('admin.colActions') }}</th>
                 </tr>
@@ -387,6 +395,17 @@ async function removeAlert(id: string) {
                     >
                       {{ resp.role === 'rescuer' ? 'Rescatista' : 'Coordinador' }}
                     </span>
+                  </td>
+                  <td class="px-4 py-3 text-xs text-slate-700">
+                    <div v-if="resp.brigade">
+                      <span class="font-semibold">{{ resp.brigade }}</span>
+                      <span v-if="resp.brigadeRole" class="text-slate-500 ml-1">({{ resp.brigadeRole }})</span>
+                    </div>
+                    <div v-if="resp.joinedHubName" class="text-[10px] text-indigo-600 font-semibold mt-0.5 flex items-center gap-0.5">
+                      <MaterialIcon name="place" :size="12" />
+                      <span>{{ resp.joinedHubName }}</span>
+                    </div>
+                    <span v-if="!resp.brigade && !resp.joinedHubName" class="text-slate-400">—</span>
                   </td>
                   <td class="px-4 py-3 text-slate-600 font-mono text-xs">{{ resp.email }}</td>
                   <td class="px-4 py-3 text-right">

@@ -11,7 +11,7 @@ import MaterialIcon from './MaterialIcon.vue'
 
 const props = defineProps<{
   item: InventoryItem
-  hub: Pick<ResourceHub, 'id' | 'name' | 'contactPhone' | 'whatsappGroup'>
+  hub: Pick<ResourceHub, 'id' | 'name' | 'contactPhone' | 'whatsappGroup' | 'hubType'>
   mode: 'civilian' | 'coordinator'
   offline?: boolean
 }>()
@@ -78,7 +78,15 @@ async function close() {
         </div>
         <div class="nc-text">
           <div class="nc-name" :class="{ 'nc-name--done': state === 'confirmada' }">{{ item.name }}</div>
-          <div class="nc-sub">{{ subtitle }}</div>
+          <div class="nc-sub flex items-center gap-1.5 flex-wrap mt-0.5">
+            <span>{{ subtitle }}</span>
+            <span v-if="hub.hubType === 'mobile'" class="inline-flex items-center gap-0.5 text-[9px] text-red-700 font-extrabold uppercase bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100">
+              🚨 {{ t('hubs.filterHubTypeMobile') }}
+            </span>
+            <span v-else class="inline-flex items-center gap-0.5 text-[9px] text-indigo-700 font-extrabold uppercase bg-indigo-50 px-1.5 py-0.5 rounded-full border border-indigo-100">
+              📦 {{ t('hubs.filterHubTypeStatic') }}
+            </span>
+          </div>
         </div>
       </div>
       <div v-if="state === 'confirmada'" class="nc-badge nc-badge--green">

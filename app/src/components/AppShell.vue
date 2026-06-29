@@ -39,6 +39,7 @@ const navGroups = computed(() => {
       items: [
         { name: 'needs', to: '/', label: 'shell.nav.needs', icon: 'inventory_2' },
         { name: 'hubs', to: '/hubs', label: 'shell.nav.hubs', icon: 'warehouse' },
+        { name: 'brigades', to: '/brigades', label: 'shell.nav.brigades', icon: 'group_work' },
       ]
     },
     {
@@ -82,6 +83,7 @@ function isActive(to: string): boolean {
 
 function getRoleLabel(role: string) {
   if (role === 'civilian') return t('verify.roleColaborador')
+  if (role === 'rescuer') return t('verify.roleRescatista')
   if (role === 'coordinator') return t('verify.roleCoordinador')
   if (role === 'admin') return t('verify.roleOrganizador')
   if (role === 'sudo') return t('verify.roleFundador')

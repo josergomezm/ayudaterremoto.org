@@ -18,6 +18,8 @@ const hubsStore = useHubsStore()
 
 const filterCategory = ref<'all' | 'medical' | 'structural' | 'obstruction' | 'resource'>('all')
 const filterStatus = ref<'all' | 'red' | 'yellow' | 'green'>('all')
+const filterAssignment = ref<'all' | 'mine' | 'unassigned'>('all')
+const filterAge = ref<'all' | 'stale'>('all')
 const sortBy = ref<'newest' | 'oldest' | 'severity-desc' | 'severity-asc'>('newest')
 const viewMode = ref<'grid' | 'list'>('grid')
 const showHubs = ref(true)
@@ -46,6 +48,21 @@ const filteredActive = computed(() => {
   if (filterStatus.value !== 'all') {
     list = list.filter(i => i.status === filterStatus.value)
   }
+
+  if (filterAssignment.value === 'mine') {
+    list = list.filter(i => i.assignedTo === session.user?.uid)
+  } else if (filterAssignment.value === 'unassigned') {
+    list = list.filter(i => !i.assignedTo || i.assignmentStatus === 'unassigned')
+  }
+
+  if (filterAge.value === 'stale') {
+    list = list.filter(i => {
+      const date = new Date(i.createdAt)
+      if (isNaN(date.getTime())) return false
+      const diffMs = Date.now() - date.getTime()
+      return diffMs >= 72 * 60 * 60 * 1000
+    })
+  }
   
   list.sort((a, b) => {
     if (sortBy.value === 'newest') {
@@ -72,6 +89,21 @@ const filteredCleared = computed(() => {
   
   if (filterStatus.value !== 'all') {
     list = list.filter(i => i.status === filterStatus.value)
+  }
+
+  if (filterAssignment.value === 'mine') {
+    list = list.filter(i => i.assignedTo === session.user?.uid)
+  } else if (filterAssignment.value === 'unassigned') {
+    list = list.filter(i => !i.assignedTo || i.assignmentStatus === 'unassigned')
+  }
+
+  if (filterAge.value === 'stale') {
+    list = list.filter(i => {
+      const date = new Date(i.createdAt)
+      if (isNaN(date.getTime())) return false
+      const diffMs = Date.now() - date.getTime()
+      return diffMs >= 72 * 60 * 60 * 1000
+    })
   }
   
   list.sort((a, b) => {
@@ -112,7 +144,7 @@ const filteredCleared = computed(() => {
 
       <!-- Filter and Sort Controls -->
       <div class="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm border border-[var(--line)]">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
           <!-- Category Filter -->
           <div class="space-y-1.5">
             <label class="text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('map.filters.categoryLabel') }}</label>
@@ -133,6 +165,25 @@ const filteredCleared = computed(() => {
               <option value="red">{{ t('map.filters.priorities.red') }}</option>
               <option value="yellow">{{ t('map.filters.priorities.yellow') }}</option>
               <option value="green">{{ t('map.filters.priorities.green') }}</option>
+            </select>
+          </div>
+
+          <!-- Assignment Filter -->
+          <div class="space-y-1.5">
+            <label class="text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('map.filters.assignmentLabel') }}</label>
+            <select v-model="filterAssignment" class="w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm bg-white outline-none focus:border-[var(--primary)]">
+              <option value="all">{{ t('map.filters.assignments.all') }}</option>
+              <option value="mine">{{ t('map.filters.assignments.mine') }}</option>
+              <option value="unassigned">{{ t('map.filters.assignments.unassigned') }}</option>
+            </select>
+          </div>
+
+          <!-- Age Filter -->
+          <div class="space-y-1.5">
+            <label class="text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('map.filters.ageLabel') }}</label>
+            <select v-model="filterAge" class="w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm bg-white outline-none focus:border-[var(--primary)]">
+              <option value="all">{{ t('map.filters.ages.all') }}</option>
+              <option value="stale">{{ t('map.filters.ages.stale') }}</option>
             </select>
           </div>
 

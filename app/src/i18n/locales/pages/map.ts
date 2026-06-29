@@ -13,6 +13,8 @@ const es = {
     priorityLabel: 'Prioridad',
     sortByLabel: 'Ordenar por',
     viewLabel: 'Vista',
+    assignmentLabel: 'Asignación',
+    ageLabel: 'Antigüedad',
     noResults: 'Sin resultados para los filtros seleccionados.',
     categories: {
       all: 'Todas',
@@ -33,6 +35,15 @@ const es = {
       severityDesc: 'Gravedad (Mayor a menor)',
       severityAsc: 'Gravedad (Menor a mayor)',
     },
+    assignments: {
+      all: 'Todos',
+      mine: 'Asignados a mí',
+      unassigned: 'Sin asignar',
+    },
+    ages: {
+      all: 'Cualquier antigüedad',
+      stale: 'Críticos (>72 horas)',
+    },
   },
 }
 
@@ -51,6 +62,8 @@ const en: typeof es = {
     priorityLabel: 'Priority',
     sortByLabel: 'Sort by',
     viewLabel: 'View',
+    assignmentLabel: 'Assignment',
+    ageLabel: 'Age',
     noResults: 'No results found matching the selected filters.',
     categories: {
       all: 'All',
@@ -70,6 +83,15 @@ const en: typeof es = {
       oldest: 'Oldest first',
       severityDesc: 'Severity (High to Low)',
       severityAsc: 'Severity (Low to High)',
+    },
+    assignments: {
+      all: 'All',
+      mine: 'Assigned to me',
+      unassigned: 'Unassigned',
+    },
+    ages: {
+      all: 'Any age',
+      stale: 'Critical (>72 hours)',
     },
   },
 }

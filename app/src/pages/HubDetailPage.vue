@@ -186,6 +186,22 @@ async function doReopen(item: InventoryItem) {
         <div><strong>{{ t('hubs.contactName') }}:</strong> {{ hub.contactName }}</div>
         <div><strong>{{ t('hubs.lastUpdate') }}:</strong> {{ formatRelativeTime(hub.updatedAt, locale) }}</div>
       </div>
+
+      <!-- Shelter Capacity Banner (WS6) -->
+      <div 
+        v-if="hub.offersShelter" 
+        class="border-t border-slate-100 pt-3 flex items-center gap-2 text-sm text-slate-800"
+      >
+        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+          <MaterialIcon name="bed" :size="16" />
+        </span>
+        <span v-if="hub.shelterCapacity && hub.shelterCapacity > 0">
+          Refugio disponible: <strong class="text-indigo-600 font-extrabold">{{ hub.shelterCapacity }} plazas libres</strong>
+        </span>
+        <span v-else class="text-slate-500 italic font-semibold">
+          Refugio completo (0 plazas libres)
+        </span>
+      </div>
     </div>
 
     <!-- Inventory Display -->

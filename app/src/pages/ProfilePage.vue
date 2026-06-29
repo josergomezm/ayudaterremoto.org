@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from '../stores/session'
+import { useHubsStore } from '../stores/hubs'
 import BaseButton from '../components/BaseButton.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
 
@@ -16,6 +17,15 @@ const requestNote = ref('')
 const requestPhone = ref('')
 const requestRole = ref<'rescuer' | 'coordinator'>('rescuer')
 const requestStatus = ref<string | null>(null)
+const hubsStore = useHubsStore()
+const selectedHubId = ref('')
+
+// Hub selection is required for field roles (rescuer/coordinator), not for admin+
+const hubRequired = computed(() => requestRole.value === 'rescuer' || requestRole.value === 'coordinator')
+const canSubmitRequest = computed(() =>
+  requestPhone.value.trim().length >= 5 &&
+  (!hubRequired.value || selectedHubId.value !== '')
+)
 
 async function loadRequestStatus() {
   if (session.role === 'civilian') {
@@ -41,10 +51,11 @@ watch(() => [session.role, session.isVerified], () => {
   }
 }, { immediate: true })
 
-onMounted(() => {
+onMounted(async () => {
   if (session.isVerified) {
     loadRequestStatus()
   }
+  await hubsStore.fetchAll()
 })
 
 async function doSignIn() {
@@ -77,11 +88,13 @@ async function doSignOut() {
 }
 
 async function doSubmitRequest() {
-  if (requestPhone.value.trim().length < 5) return
+  if (!canSubmitRequest.value) return
   busy.value = true
   message.value = null
   messageType.value = null
-  const res = await session.requestResponder(requestPhone.value, requestNote.value, requestRole.value)
+  const targetHub = hubsStore.hubs.find(h => h.id === selectedHubId.value)
+  const targetHubName = targetHub ? targetHub.name : null
+  const res = await session.requestResponder(requestPhone.value, requestNote.value, requestRole.value, '', '', selectedHubId.value || null, targetHubName)
   busy.value = false
   if (res.ok) {
     message.value = t('verify.requestSuccess')
@@ -89,6 +102,7 @@ async function doSubmitRequest() {
     requestStatus.value = 'pending'
     requestNote.value = ''
     requestPhone.value = ''
+    selectedHubId.value = ''
   } else {
     message.value = res.error || t('verify.failed')
     messageType.value = 'error'
@@ -250,6 +264,21 @@ function getRoleLabel(role: string) {
           </ul>
         </div>
 
+        <!-- Assigned Hub / Brigade (read-only for active rescuers/coordinators) -->
+        <div v-if="session.can('rescuer') && session.joinedHubName" class="card bg-[#F4F2EE] border border-[var(--line)] space-y-2">
+          <div class="flex items-center gap-2">
+            <MaterialIcon name="emergency" :size="18" class="text-[var(--primary)]" />
+            <h2 class="font-extrabold text-[var(--ink)] text-sm">Unidad Asignada</h2>
+          </div>
+          <p class="text-xs text-[var(--ink2)] leading-relaxed">
+            Tu afiliación es gestionada por los coordinadores. Contacta a un administrador si necesitas cambiar de unidad.
+          </p>
+          <div class="flex items-center gap-3 bg-white border border-[var(--line)] rounded-xl px-4 py-3">
+            <MaterialIcon name="home_health" :size="20" class="text-[var(--primary)] shrink-0" />
+            <span class="font-bold text-[var(--ink)] text-sm">{{ session.joinedHubName }}</span>
+          </div>
+        </div>
+
         <!-- Volunteer/Coordinator Request Flow -->
         <div v-if="session.role === 'civilian'" class="space-y-4">
           <!-- Pending State -->
@@ -284,6 +313,22 @@ function getRoleLabel(role: string) {
                   <option value="coordinator">{{ t('verify.roleCoordinador') }}</option>
                 </select>
               </div>
+              <!-- Hub/Brigade selection: required for rescuer & coordinator -->
+              <div class="space-y-1.5">
+                <label class="block text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">
+                  {{ t('verify.requestHubLabel') }}
+                  <span v-if="hubRequired" class="text-[var(--red-dot)] ml-0.5">*</span>
+                </label>
+                <select v-model="selectedHubId" class="input-field" :class="hubRequired && !selectedHubId ? 'border-[var(--amber-dot)]' : ''">
+                  <option value="">{{ t('verify.requestHubPlaceholder') }}</option>
+                  <option v-for="h in hubsStore.hubs" :key="h.id" :value="h.id">
+                    {{ h.name }} ({{ h.hubType === 'mobile' ? 'Brigada Móvil' : 'Estático' }})
+                  </option>
+                </select>
+                <p v-if="hubRequired && !selectedHubId" class="text-[11px] text-[var(--amber-c)] font-semibold flex items-center gap-1">
+                  <MaterialIcon name="info" :size="13" /> Debes pertenecer a una unidad o brigada registrada.
+                </p>
+              </div>
               <div class="space-y-1.5">
                 <label class="block text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('verify.requestNotePlaceholder') }}</label>
                 <textarea
@@ -293,7 +338,7 @@ function getRoleLabel(role: string) {
                   class="input-field"
                 />
               </div>
-              <BaseButton block :disabled="busy || requestPhone.trim().length < 5" @click="doSubmitRequest">
+              <BaseButton block :disabled="busy || !canSubmitRequest" @click="doSubmitRequest">
                 {{ t('verify.requestButton') }}
               </BaseButton>
             </div>

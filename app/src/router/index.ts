@@ -1,5 +1,7 @@
 import { nextTick } from 'vue'
 import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
+import { useSessionStore } from '../stores/session'
+import { useAdminStore } from '../stores/admin'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -17,16 +19,44 @@ const router = createRouter({
     { path: '/guides', name: 'guides', component: () => import('../pages/GuidesPage.vue') },
     { path: '/guides/:id', name: 'guide-detail', component: () => import('../pages/GuideDetailPage.vue') },
     { path: '/about', name: 'about', component: () => import('../pages/AboutPage.vue') },
-    { path: '/admin', name: 'admin', component: () => import('../pages/AdminPage.vue') },
+    // Admin-only routes
+    { path: '/admin', name: 'admin', component: () => import('../pages/AdminPage.vue'), meta: { requiresAdmin: true } },
     { path: '/hubs', name: 'hubs', component: () => import('../pages/HubsPage.vue') },
-    { path: '/hubs/create', name: 'hub-create', component: () => import('../pages/HubCreatePage.vue') },
+    { path: '/hubs/create', name: 'hub-create', component: () => import('../pages/HubCreatePage.vue'), meta: { requiresAdmin: true } },
     { path: '/hubs/:id', name: 'hub-detail', component: () => import('../pages/HubDetailPage.vue') },
-    { path: '/hubs/:id/manage', name: 'hub-manage', component: () => import('../pages/HubManagePage.vue') },
+    { path: '/hubs/:id/manage', name: 'hub-manage', component: () => import('../pages/HubManagePage.vue'), meta: { requiresCoordinator: true } },
+    { path: '/brigades', name: 'brigades', component: () => import('../pages/BrigadesPage.vue') },
+    { path: '/brigades/:id', name: 'brigade-detail', component: () => import('../pages/BrigadeDetailPage.vue') },
     // Catch-all 404. Required because Firebase Hosting rewrites every URL to
     // index.html — without this, typos render an empty RouterView.
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../pages/NotFoundPage.vue') },
   ],
   scrollBehavior: () => ({ top: 0 }),
+})
+
+// ── ROUTE AUTH GUARDS ────────────────────────────────────────────────────────
+// Protects sensitive routes at the router level (belt-and-suspenders alongside
+// in-template v-if checks). Waits for the session to be ready before deciding.
+router.beforeEach(async (to) => {
+  if (!to.meta.requiresAdmin && !to.meta.requiresCoordinator) return true
+
+  const session = useSessionStore()
+  const admin = useAdminStore()
+
+  // Wait for session to hydrate (firebase auth + /auth/me)
+  if (!session.ready) {
+    await new Promise<void>((resolve) => {
+      const stop = session.$subscribe(() => { if (session.ready) { stop(); resolve() } })
+    })
+  }
+
+  if (to.meta.requiresAdmin && !admin.isAdmin) {
+    return { name: 'profile' }
+  }
+  if (to.meta.requiresCoordinator && !session.can('coordinator') && !admin.isAdmin) {
+    return { name: 'profile' }
+  }
+  return true
 })
 
 // ── VIEW TRANSITION WRAPPER ─────────────────────────────────────────────────
@@ -52,3 +82,4 @@ router.beforeResolve(async (_to, from) => {
 })
 
 export default router
+

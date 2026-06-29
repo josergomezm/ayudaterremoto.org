@@ -36,6 +36,25 @@ export interface Incident {
   resourceType?: 'water' | 'food' | 'medical' | 'shelter' | 'tools' | 'other'
   medicalCount?: '1' | '2-5' | '6-10' | '10+'
   obstructionType?: 'landslide' | 'debris' | 'trees' | 'vehicles' | 'other'
+  // Incident Assignment & Status Flow
+  assignedTo?: string | null
+  assignedName?: string | null
+  assignedBrigade?: string | null
+  assignmentStatus?: 'unassigned' | 'assigned' | 'en_route' | 'on_site' | 'handling' | 'resolved' | 'evacuated'
+  assignmentEta?: string | null
+  assignmentNotes?: string | null
+  // 72-Hour Control & Re-verification
+  lastReverifiedAt?: string | null
+  reverifiedBy?: string | null
+  reverificationNotes?: string | null
+  // Outcome / Closure Report
+  outcomeSurvivors?: number
+  outcomeDeceased?: number
+  outcomeInjured?: number
+  outcomeStructuralDamage?: 'none' | 'minor' | 'moderate' | 'severe' | 'collapse'
+  outcomeDetails?: string
+  outcomeSubmittedAt?: string
+  outcomeSubmittedBy?: string
 }
 
 export interface ReportSummary {
@@ -156,6 +175,41 @@ export const useIncidentsStore = defineStore('incidents', () => {
     return res
   }
 
+  async function assignIncident(id: string) {
+    const res = await authedFetch<{ incident: Incident }>(`/incidents/${id}/assign`, {
+      method: 'POST',
+    })
+    if (res.ok) replace(res.data.incident)
+    return res
+  }
+
+  async function updateAssignment(id: string, payload: { status: string; eta?: string; notes?: string }) {
+    const res = await authedFetch<{ incident: Incident }>(`/incidents/${id}/update-assignment`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    if (res.ok) replace(res.data.incident)
+    return res
+  }
+
+  async function resolveIncidentWithOutcome(id: string, outcomePayload: any) {
+    const res = await authedFetch<{ incident: Incident }>(`/incidents/${id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify(outcomePayload),
+    })
+    if (res.ok) replace(res.data.incident)
+    return res
+  }
+
+  async function reverifyIncident(id: string, payload: { notes: string }) {
+    const res = await authedFetch<{ incident: Incident }>(`/incidents/${id}/reverify`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    if (res.ok) replace(res.data.incident)
+    return res
+  }
+
   function byId(id: string): Incident | undefined {
     return incidents.value.find((i) => i.id === id)
   }
@@ -173,6 +227,8 @@ export const useIncidentsStore = defineStore('incidents', () => {
   return {
     incidents, loading, error, pending, active, cleared,
     fetchAll, refreshPending, submitReport, syncNow,
-    setStatus, evacuate, resolve, confirmResolution, byId, shuffle,
+    setStatus, evacuate, resolve, confirmResolution,
+    assignIncident, updateAssignment, resolveIncidentWithOutcome, reverifyIncident,
+    byId, shuffle,
   }
 })

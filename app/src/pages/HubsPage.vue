@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
 import { useHubsStore, type ResourceHub } from '../stores/hubs'
@@ -62,6 +62,19 @@ function canManage(hub: ResourceHub) {
   }
   return false
 }
+const searchQuery = ref('')
+const staticHubs = computed(() => {
+  return hubsStore.hubs.filter(h => h.hubType === 'static' || !h.hubType)
+})
+const filteredHubs = computed(() => {
+  const q = searchQuery.value.toLowerCase().trim()
+  if (!q) return staticHubs.value
+  return staticHubs.value.filter(h => 
+    h.name.toLowerCase().includes(q) || 
+    h.address.toLowerCase().includes(q) ||
+    h.contactName.toLowerCase().includes(q)
+  )
+})
 </script>
 
 <template>
@@ -83,7 +96,7 @@ function canManage(hub: ResourceHub) {
 
     <Loader v-if="hubsStore.loading" :label="t('common.loading')" />
 
-    <div v-else-if="hubsStore.hubs.length === 0" class="flex flex-col items-center gap-3 rounded-2xl bg-slate-50 p-8 text-center ring-1 ring-slate-200">
+    <div v-else-if="staticHubs.length === 0" class="flex flex-col items-center gap-3 rounded-2xl bg-slate-50 p-8 text-center ring-1 ring-slate-200">
       <span class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-slate-500">
         <MaterialIcon name="storefront" :size="26" />
       </span>
@@ -98,11 +111,28 @@ function canManage(hub: ResourceHub) {
       </RouterLink>
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div 
-        v-for="hub in hubsStore.hubs" 
-        :key="hub.id"
-        :id="`hub-${hub.id}`"
+    <template v-else>
+      <!-- Search Input -->
+      <div class="relative">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+          <MaterialIcon name="search" :size="20" />
+        </span>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Buscar centro por nombre, dirección o contacto..."
+          class="w-full pl-11 pr-4 py-3 border border-slate-200 rounded-2xl focus:border-indigo-500 focus:outline-none text-sm transition-all bg-white shadow-sm"
+        />
+      </div>
+
+      <div v-if="filteredHubs.length === 0" class="text-center py-10 text-sm text-slate-500 bg-slate-50 rounded-2xl border border-slate-100">
+        No se encontraron centros que coincidan con su búsqueda.
+      </div>
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div 
+          v-for="hub in filteredHubs" 
+          :key="hub.id"
+          :id="`hub-${hub.id}`"
         @click="goToDetail(hub.id)"
         class="flex flex-col justify-between rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 relative overflow-hidden cursor-pointer hover:shadow-md hover:ring-slate-300 transition duration-200"
       >
@@ -123,6 +153,19 @@ function canManage(hub: ResourceHub) {
               <p class="text-sm text-slate-500 flex items-start gap-1 mt-1">
                 <MaterialIcon name="location_on" :size="16" class="text-slate-400 shrink-0 mt-0.5" />
                 <span>{{ hub.address }}</span>
+              </p>
+              <!-- Shelter badge (WS6) -->
+              <p 
+                v-if="hub.offersShelter" 
+                class="text-xs text-indigo-600 font-semibold flex items-center gap-1 mt-1.5"
+              >
+                <MaterialIcon name="bed" :size="14" />
+                <span v-if="hub.shelterCapacity && hub.shelterCapacity > 0">
+                  Refugio: {{ hub.shelterCapacity }} plazas libres
+                </span>
+                <span v-else class="text-slate-500 italic font-medium">
+                  Refugio completo
+                </span>
               </p>
             </div>
             
@@ -244,6 +287,7 @@ function canManage(hub: ResourceHub) {
         </div>
       </div>
     </div>
+  </template>
 
     <!-- QR Code Modal -->
     <div v-if="qrHub" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">

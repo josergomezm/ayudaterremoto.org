@@ -8,8 +8,8 @@ import type { Role } from './session'
 export interface AuditEntry { voucher: string; voucheeDni: string; timestamp: string }
 export interface AdminUser { email: string; role: 'admin' | 'sudo' }
 export interface AccessRequest { email: string; name: string; phone: string; note?: string; requestedAt: string }
-export interface ResponderRequest { email: string; name: string; phone: string; note?: string; requestedAt: string; requestedRole?: 'rescuer' | 'coordinator' }
-export interface Responder { email: string; name?: string; role: string; updatedAt?: string }
+export interface ResponderRequest { email: string; name: string; phone: string; note?: string; requestedAt: string; requestedRole?: 'rescuer' | 'coordinator'; brigade?: string; brigadeRole?: string; requestedHubId?: string; requestedHubName?: string }
+export interface Responder { email: string; name?: string; role: string; brigade?: string; brigadeRole?: string; joinedHubId?: string; joinedHubName?: string; updatedAt?: string }
 export interface AuditLogEntry {
   action: string
   actorId: string

@@ -26,6 +26,10 @@ export const accessRequestSchema = z.object({
   phone: z.string().min(5),
   note: z.string().max(500).optional(),
   role: z.enum(["rescuer", "coordinator"]).optional(),
+  brigade: z.string().optional(),
+  brigadeRole: z.string().optional(),
+  hubId: z.string().optional().nullable(),
+  hubName: z.string().optional().nullable(),
 });
 
 const categorySchema = z.enum(["medical", "structural", "obstruction", "resource"]);
@@ -120,6 +124,9 @@ export const hubCreateSchema = z.object({
   contactPhone: z.string().min(5),
   contactName: z.string().min(2),
   whatsappGroup: z.string().optional(),
+  hubType: z.enum(["static", "mobile"]).optional(),
+  offersShelter: z.boolean().optional(),
+  shelterCapacity: z.number().int().nonnegative().optional(),
 });
 
 export const hubUpdateSchema = z.object({
@@ -129,6 +136,9 @@ export const hubUpdateSchema = z.object({
   contactName: z.string().min(2).optional(),
   whatsappGroup: z.string().optional(),
   status: z.enum(["active", "closed"]).optional(),
+  hubType: z.enum(["static", "mobile"]).optional(),
+  offersShelter: z.boolean().optional(),
+  shelterCapacity: z.number().int().nonnegative().optional(),
 });
 
 export const inventoryUpsertSchema = z.object({
@@ -152,4 +162,28 @@ export const hubCoordinatorSchema = z.object({
 // Confirmar una necesidad (Workstream 3) — proofUrl opcional (solo un enlace).
 export const needConfirmSchema = z.object({
   proofUrl: z.string().url().optional(),
+});
+
+// Rescuer & Brigade Flow Additions
+export const updateBrigadeSchema = z.object({
+  brigade: z.string().optional(),
+  brigadeRole: z.string().optional(),
+});
+
+export const assignmentUpdateSchema = z.object({
+  status: z.enum(["unassigned", "assigned", "en_route", "on_site", "handling", "resolved", "evacuated"]),
+  eta: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const reverifySchema = z.object({
+  notes: z.string().min(1),
+});
+
+export const resolveOutcomeSchema = z.object({
+  outcomeSurvivors: z.number().int().min(0).optional(),
+  outcomeDeceased: z.number().int().min(0).optional(),
+  outcomeInjured: z.number().int().min(0).optional(),
+  outcomeStructuralDamage: z.enum(["none", "minor", "moderate", "severe", "collapse"]).optional(),
+  outcomeDetails: z.string().optional(),
 });
