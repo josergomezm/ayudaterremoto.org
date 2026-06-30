@@ -8,6 +8,7 @@ import { useAdminStore, type AdminUser } from '../stores/admin'
 import { useToast } from '../lib/toast'
 import Loader from '../components/Loader.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
+import InventoryMovementModal from '../components/InventoryMovementModal.vue'
 import { formatRelativeTime } from '../lib/date'
 
 const { t, locale } = useI18n()
@@ -18,12 +19,17 @@ const session = useSessionStore()
 const admin = useAdminStore()
 
 const hubId = route.params.id as string
+const showMovementModal = ref(false)
 
-const activeTab = ref<'inventory' | 'details' | 'logs' | 'coordinators'>('inventory')
+const activeTab = ref<'inventory' | 'movements' | 'details' | 'logs' | 'coordinators'>('inventory')
 
 const hub = computed(() => {
   return hubsStore.hubs.find(h => h.id === hubId)
 })
+
+// Carga el historial de movimientos en cuanto el centro esté disponible en el store
+// (al entrar directo/refrescar, el centro se carga async — esperamos a que exista).
+watch(hub, (h) => { if (h && !h.movements) hubsStore.fetchMovements(hubId) }, { immediate: true })
 
 const coordinators = computed(() => {
   return (hub.value as any)?.coordinators || []
@@ -303,7 +309,7 @@ async function onRemoveCoordinator(email: string) {
       <!-- Navigation Tabs -->
       <div class="flex border-b border-slate-200 gap-1 overflow-x-auto pb-px">
         <button 
-          v-for="tab in ['inventory', 'details', 'logs', 'coordinators']" 
+          v-for="tab in ['inventory', 'movements', 'details', 'logs', 'coordinators']"
           :key="tab"
           @click="activeTab = tab as any"
           class="border-b-2 px-4 py-2 text-sm font-semibold transition-all cursor-pointer whitespace-nowrap"
@@ -312,26 +318,45 @@ async function onRemoveCoordinator(email: string) {
             : 'border-transparent text-slate-500 hover:text-slate-700'"
         >
           <span v-if="tab === 'inventory'">{{ t('hubs.inventory') }}</span>
+          <span v-else-if="tab === 'movements'">{{ t('movements.history') }}</span>
           <span v-else-if="tab === 'details'">{{ t('hubs.hubDetails') }}</span>
           <span v-else-if="tab === 'logs'">{{ t('hubs.activityLog') }}</span>
           <span v-else-if="tab === 'coordinators'">{{ t('hubs.coordinators') }}</span>
         </button>
       </div>
 
+      <!-- Modal de movimiento (lote) — disponible desde cualquier pestaña -->
+      <InventoryMovementModal
+        v-if="showMovementModal"
+        :hub-id="hubId"
+        :items="hub?.inventory || []"
+        @close="showMovementModal = false"
+        @saved="hubsStore.fetchMovements(hubId)"
+      />
+
       <!-- Tab Contents -->
       <div class="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-slate-200">
         
         <!-- Tab 1: Inventory Table -->
         <div v-if="activeTab === 'inventory'" class="space-y-6">
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ t('hubs.inventory') }}</h2>
-            <button 
-              @click="showAddResourceForm = true"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 cursor-pointer shadow-sm"
-            >
-              <MaterialIcon name="add" :size="16" />
-              {{ t('hubs.addResource') }}
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                @click="showMovementModal = true"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 cursor-pointer shadow-sm"
+              >
+                <MaterialIcon name="swap_vert" :size="16" />
+                {{ t('movements.register') }}
+              </button>
+              <button
+                @click="showAddResourceForm = true"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 cursor-pointer shadow-sm"
+              >
+                <MaterialIcon name="add" :size="16" />
+                {{ t('hubs.addResource') }}
+              </button>
+            </div>
           </div>
 
           <!-- Add Resource Form -->
@@ -482,6 +507,45 @@ async function onRemoveCoordinator(email: string) {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Tab: Movimientos (lotes entrada/salida) -->
+        <div v-else-if="activeTab === 'movements'" class="space-y-4">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ t('movements.history') }}</h2>
+            <button
+              @click="showMovementModal = true"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 cursor-pointer shadow-sm"
+            >
+              <MaterialIcon name="swap_vert" :size="16" />
+              {{ t('movements.register') }}
+            </button>
+          </div>
+
+          <div v-if="!hub?.movements || hub.movements.length === 0" class="py-8 text-center text-sm italic text-slate-500">
+            {{ t('movements.empty') }}
+          </div>
+          <div v-else class="rounded-xl ring-1 ring-slate-200 divide-y divide-slate-100">
+            <div v-for="mv in hub.movements" :key="mv.id" class="px-4 py-3">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span
+                    class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold"
+                    :class="mv.type === 'entrada' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'"
+                  >{{ mv.type === 'entrada' ? t('movements.entrada') : t('movements.salida') }}</span>
+                  <span class="text-sm font-semibold text-slate-800 truncate">{{ mv.reason }}</span>
+                </div>
+                <span class="text-[11px] text-slate-400 whitespace-nowrap">{{ formatRelativeTime(mv.createdAt, locale) }}</span>
+              </div>
+              <div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-600">
+                <span v-for="(ln, j) in mv.lines" :key="j">
+                  {{ ln.itemName }}: <strong>{{ mv.type === 'entrada' ? '+' : '−' }}{{ ln.quantity }} {{ ln.unit }}</strong>
+                </span>
+              </div>
+              <div v-if="mv.note" class="mt-0.5 text-xs italic text-slate-500">{{ mv.note }}</div>
+              <div class="mt-0.5 text-[11px] text-slate-400">{{ t('movements.by', { name: mv.actorName }) }}</div>
+            </div>
           </div>
         </div>
 

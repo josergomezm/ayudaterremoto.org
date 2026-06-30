@@ -66,7 +66,7 @@ async function resolveClusterId(
 }
 import type {
   Incident, Announcement, VouchCode, AdminUser, AccessRequest, ResponderRequest, MissingPerson, LocationRequest, AdmittedPatient,
-  ResourceHub, InventoryItem, HubLog, HubCoordinator,
+  ResourceHub, InventoryItem, HubLog, InventoryMovement, MovementLine,
 } from "./types";
 import {
   echoSchema,
@@ -75,6 +75,7 @@ import {
   locationRequestSchema, locationResolveSchema, admittedPatientSchema, hospitalInputSchema,
   hubCreateSchema, hubUpdateSchema, inventoryUpsertSchema, inventoryAdjustSchema, hubCoordinatorSchema,
   needConfirmSchema, updateBrigadeSchema, assignmentUpdateSchema, reverifySchema, resolveOutcomeSchema,
+  movementSchema,
 } from "./models";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
@@ -90,8 +91,10 @@ async function isHubCoordinator(hubId: string, actorEmail: string): Promise<bool
   if (!hubSnap.exists) return false;
   const hub = hubSnap.data() as ResourceHub;
   if (hub.createdBy === actorEmail) return true;
-  const coordSnap = await db.doc(`resourceHubs/${hubId}/coordinators/${actorEmail}`).get();
-  return coordSnap.exists;
+  // Los coordinadores viven en el campo array `coordinators` del documento del centro
+  // (ahí los escribe la aprobación de solicitudes). La subcolección quedó en desuso.
+  const coordinators = (hub as { coordinators?: { email?: string }[] }).coordinators || [];
+  return coordinators.some((c) => !!c.email && c.email.toLowerCase() === actorEmail.toLowerCase());
 }
 
 function publicIncident(i: Incident, viewer: Actor | null) {
@@ -1099,38 +1102,11 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         const logSnap = await db.collection(`resourceHubs/${hub.id}/logs`).orderBy("timestamp", "desc").limit(5).get();
         const recentLogs = logSnap.docs.map((lg) => lg.data() as HubLog);
 
-        const coordSnap = await db.collection(`resourceHubs/${hub.id}/coordinators`).get();
-        const coordinators = [];
+        // Coordinadores: del campo array `coordinators` del documento del centro
+        // (ahí los escribe la aprobación; la subcolección quedó en desuso).
+        const hubCoordinators = (hub as { coordinators?: { email: string; name?: string }[] }).coordinators;
+        const coordinators = Array.isArray(hubCoordinators) ? hubCoordinators : [];
         
-        // Add creator first if not command
-        const creatorEmail = hub.createdBy;
-        const creatorAdminSnap = await db.doc(`adminUsers/${creatorEmail}`).get();
-        let isCreatorCommand = false;
-        if (creatorAdminSnap.exists) {
-          const role = (creatorAdminSnap.data() as { role: string }).role;
-          if (role === "admin" || role === "sudo") isCreatorCommand = true;
-        }
-        if (!isCreatorCommand) {
-          coordinators.push({
-            email: creatorEmail,
-            name: creatorAdminSnap.exists ? (creatorAdminSnap.data() as { name?: string }).name || creatorEmail : creatorEmail,
-            addedBy: "system",
-            addedAt: hub.createdAt
-          });
-        }
-
-        // Add other coordinators
-        for (const cd of coordSnap.docs) {
-          const c = cd.data() as HubCoordinator;
-          if (c.email === creatorEmail) continue;
-          const adminSnap = await db.doc(`adminUsers/${c.email}`).get();
-          if (adminSnap.exists) {
-            const role = (adminSnap.data() as { role: string }).role;
-            if (role === "admin" || role === "sudo") continue; // Exclude command admins/sudos
-          }
-          coordinators.push(c);
-        }
-
         hubs.push({ ...hub, inventory, recentLogs, coordinators });
       }
       return send(200, { hubs });
@@ -1245,6 +1221,60 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         return send(200, { logs });
       }
 
+      // POST /hubs/:id/movements — registra un lote (entrada/salida) multi-ítem con razón
+      if (m === "POST" && seg.length === 3 && seg[2] === "movements") {
+        const actor = await getActor(req);
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+        if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
+        const body = movementSchema.parse(req.body);
+        const now = new Date().toISOString();
+        const sign = body.type === "entrada" ? 1 : -1;
+        const resultLines: MovementLine[] = [];
+
+        for (const line of body.lines) {
+          if (line.itemId) {
+            // Ítem existente → suma/resta a su cantidad (la unidad ya es la suya).
+            const itemRef = db.doc(`resourceHubs/${hubId}/inventory/${line.itemId}`);
+            const snap = await itemRef.get();
+            if (!snap.exists) return send(400, { error: "invalid_item", message: "Ítem no encontrado en el inventario." });
+            const item = snap.data() as InventoryItem;
+            const newQty = Math.max(0, item.quantity + sign * line.quantity);
+            const urgency = newQty === 0 ? "depleted" : newQty <= 5 ? "low" : "available";
+            await itemRef.update({ quantity: newQty, urgency, updatedAt: now });
+            resultLines.push({ itemId: item.id, itemName: item.name, unit: item.unit, category: item.category, quantity: line.quantity });
+          } else {
+            // Ítem nuevo (solo tiene sentido en una entrada).
+            if (body.type === "salida") return send(400, { error: "invalid_line", message: "No se puede dar salida a un ítem que aún no existe." });
+            const itemId = randomUUID();
+            const qty = line.quantity;
+            const urgency = qty === 0 ? "depleted" : qty <= 5 ? "low" : "available";
+            const newItem: InventoryItem = {
+              id: itemId, category: line.category!, name: line.name!.trim(), quantity: qty,
+              unit: line.unit!.trim(), urgency, updatedAt: now, status: "abierta", reopenedCount: 0,
+            };
+            await db.doc(`resourceHubs/${hubId}/inventory/${itemId}`).set(newItem);
+            resultLines.push({ itemId, itemName: newItem.name, unit: newItem.unit, category: newItem.category, quantity: qty });
+          }
+        }
+
+        const movId = randomUUID();
+        const movement: InventoryMovement = {
+          id: movId, type: body.type, reason: body.reason.trim(), note: body.note,
+          lines: resultLines, actorEmail: actor!.id, actorName: actor!.name || actor!.id, createdAt: now,
+        };
+        await db.doc(`resourceHubs/${hubId}/movements/${movId}`).set(movement);
+        await logAudit(actor, "hub_movement", { type: "resourceHub", id: hubId }, { movType: body.type, reason: movement.reason, lines: resultLines.length });
+        return send(201, { movement });
+      }
+
+      // GET /hubs/:id/movements — historial de lotes (entradas/salidas)
+      if (m === "GET" && seg.length === 3 && seg[2] === "movements") {
+        const actor = await getActor(req);
+        if (!(await isHubCoordinator(hubId, actor?.id || ""))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
+        const q = await db.collection(`resourceHubs/${hubId}/movements`).orderBy("createdAt", "desc").limit(100).get();
+        return send(200, { movements: q.docs.map((d) => d.data() as InventoryMovement) });
+      }
+
       // POST /hubs/:id/coordinators — Add coordinator
       if (m === "POST" && seg.length === 3 && seg[2] === "coordinators") {
         const actor = await getActor(req);
@@ -1259,8 +1289,14 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         if (target.role !== "coordinator") return send(400, { error: "invalid_user", message: "El usuario debe tener rol Coordinador." });
         const hubSnap = await db.doc(`resourceHubs/${hubId}`).get();
         if (!hubSnap.exists) return send(404, { error: "not_found", message: "Zona no encontrada." });
-        const coord: HubCoordinator = { email: key, name: target.name || key, addedBy: actor!.id, addedAt: new Date().toISOString() };
-        await db.doc(`resourceHubs/${hubId}/coordinators/${key}`).set(coord);
+        // Escribimos en el campo array `coordinators` del centro (misma fuente que la
+        // aprobación de solicitudes), no en una subcolección. Idempotente.
+        const coord = { email: key, name: target.name || key };
+        const existing = ((hubSnap.data() as { coordinators?: { email: string }[] }).coordinators) || [];
+        if (!existing.some((c) => c.email.toLowerCase() === key)) {
+          existing.push(coord);
+          await db.doc(`resourceHubs/${hubId}`).update({ coordinators: existing, updatedAt: new Date().toISOString() });
+        }
         await logAudit(actor, "hub_coordinator_add", { type: "resourceHub", id: hubId }, { email: key });
         return send(200, { coordinator: coord });
       }
@@ -1275,8 +1311,9 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         const hub = hubSnap.data() as ResourceHub;
         // Admin/sudo can remove coordinators from any hub; regular coordinators only from hubs they created
         if (hub.createdBy !== actor!.id && !hasRole(actor, "admin")) return send(403, { error: "forbidden", message: "Solo el creador de la zona o un administrador puede remover coordinadores." });
-        const coordEmail = decodeURIComponent(seg[3]);
-        await db.doc(`resourceHubs/${hubId}/coordinators/${coordEmail}`).delete();
+        const coordEmail = decodeURIComponent(seg[3]).toLowerCase();
+        const coordinators = ((hub as { coordinators?: { email: string }[] }).coordinators || []).filter((c) => c.email.toLowerCase() !== coordEmail);
+        await hubRef.update({ coordinators, updatedAt: new Date().toISOString() });
         await logAudit(actor, "hub_coordinator_remove", { type: "resourceHub", id: hubId }, { email: coordEmail });
         return send(200, { removed: coordEmail });
       }
@@ -1370,6 +1407,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         "POST /hubs/:id/inventory/:itemId/adjust",
         "GET /hubs/:id/logs",
         "POST /hubs/:id/coordinators", "DELETE /hubs/:id/coordinators/:email",
+        "POST /hubs/:id/movements", "GET /hubs/:id/movements",
         "POST /needs/:id/claim", "POST /needs/:id/confirm", "POST /needs/:id/reopen",
       ],
     });

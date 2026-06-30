@@ -169,6 +169,27 @@ export type HubLogAction = "restock" | "distribute" | "adjust" | "note";
 // Need lifecycle (Workstream 3): un ítem de inventario es una necesidad.
 export type NeedStatus = "abierta" | "tomada" | "confirmada";
 
+// Movimientos de inventario ("lotes"): una entrada o salida con su razón
+// ("¿de dónde vino / en qué se gastó?"), que puede tocar varios ítems a la vez.
+export type MovementType = "entrada" | "salida";
+export interface MovementLine {
+  itemId: string;
+  itemName: string;
+  unit: string;
+  category: InventoryCategory;
+  quantity: number; // magnitud (siempre positiva); el signo lo da `type`
+}
+export interface InventoryMovement {
+  id: string;
+  type: MovementType;
+  reason: string;
+  note?: string;
+  lines: MovementLine[];
+  actorEmail: string;
+  actorName: string;
+  createdAt: string;
+}
+
 export interface ResourceHub {
   id: string;
   name: string;

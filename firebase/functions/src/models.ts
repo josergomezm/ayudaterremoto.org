@@ -164,6 +164,27 @@ export const needConfirmSchema = z.object({
   proofUrl: z.string().url().optional(),
 });
 
+// Movimiento de inventario ("lote"): entrada o salida, multi-ítem, con razón.
+// Cada línea referencia un ítem existente (itemId) o define uno nuevo (name/category/unit).
+const movementLineSchema = z
+  .object({
+    itemId: z.string().optional(),
+    name: z.string().optional(),
+    category: z.enum(["water", "food", "tools", "medical", "shelter", "clothing", "hygiene", "other"]).optional(),
+    unit: z.string().optional(),
+    quantity: z.number().positive(),
+  })
+  .refine((l) => !!l.itemId || (!!l.name && !!l.unit && !!l.category), {
+    message: "Cada línea debe elegir un ítem existente o definir uno nuevo (nombre, categoría, unidad).",
+  });
+
+export const movementSchema = z.object({
+  type: z.enum(["entrada", "salida"]),
+  reason: z.string().min(1),
+  note: z.string().optional(),
+  lines: z.array(movementLineSchema).min(1),
+});
+
 // Rescuer & Brigade Flow Additions
 export const updateBrigadeSchema = z.object({
   brigade: z.string().optional(),

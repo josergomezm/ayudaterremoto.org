@@ -11,6 +11,7 @@ import shell from './locales/components/shell'
 import offline from './locales/components/offline'
 import welcome from './locales/components/welcome'
 import onboarding from './locales/components/onboarding'
+import movements from './locales/components/movements'
 import map from './locales/pages/map'
 import detail from './locales/pages/detail'
 import report from './locales/pages/report'
@@ -40,6 +41,7 @@ const messages = {
     offline: offline.es,
     welcome: welcome.es,
     onboarding: onboarding.es,
+    movements: movements.es,
     map: map.es,
     detail: detail.es,
     report: report.es,
@@ -62,6 +64,7 @@ const messages = {
     offline: offline.en,
     welcome: welcome.en,
     onboarding: onboarding.en,
+    movements: movements.en,
     map: map.en,
     detail: detail.en,
     report: report.en,

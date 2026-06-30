@@ -60,6 +60,7 @@ export interface ResourceHub {
   updatedAt: string
   inventory: InventoryItem[]
   recentLogs: HubLog[]
+  movements?: InventoryMovement[]
   coordinators?: HubCoordinator[]
   hubType?: 'static' | 'mobile'
   offersShelter?: boolean
@@ -103,6 +104,39 @@ export interface InventoryAdjustPayload {
   delta: number
   action: 'restock' | 'distribute' | 'adjust'
   note?: string
+}
+
+// Movimientos de inventario ("lotes"): entrada/salida con razón, multi-ítem.
+export type MovementType = 'entrada' | 'salida'
+export interface MovementLine {
+  itemId: string
+  itemName: string
+  unit: string
+  category: InventoryItem['category']
+  quantity: number
+}
+export interface InventoryMovement {
+  id: string
+  type: MovementType
+  reason: string
+  note?: string
+  lines: MovementLine[]
+  actorEmail: string
+  actorName: string
+  createdAt: string
+}
+export interface MovementLinePayload {
+  itemId?: string
+  name?: string
+  category?: InventoryItem['category']
+  unit?: string
+  quantity: number
+}
+export interface MovementPayload {
+  type: MovementType
+  reason: string
+  note?: string
+  lines: MovementLinePayload[]
 }
 
 export const useHubsStore = defineStore('hubs', () => {
@@ -265,6 +299,30 @@ export const useHubsStore = defineStore('hubs', () => {
     return r
   }
 
+  // ── Movimientos de inventario (lotes) ────────────────────────────────────
+  async function addMovement(hubId: string, payload: MovementPayload) {
+    const r = await authedFetch<{ movement: InventoryMovement }>(`/hubs/${hubId}/movements`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    // Un movimiento puede tocar varios ítems (y crear nuevos) → recargamos para
+    // que el inventario refleje todo.
+    if (r.ok) {
+      await fetchAll()
+      await fetchMovements(hubId)
+    }
+    return r
+  }
+
+  async function fetchMovements(hubId: string) {
+    const r = await authedFetch<{ movements: InventoryMovement[] }>(`/hubs/${hubId}/movements`)
+    if (r.ok) {
+      const hub = hubs.value.find((h) => h.id === hubId)
+      if (hub) hub.movements = r.data.movements
+    }
+    return r
+  }
+
   return {
     hubs,
     loading,
@@ -282,5 +340,7 @@ export const useHubsStore = defineStore('hubs', () => {
     claimNeed,
     confirmNeed,
     reopenNeed,
+    addMovement,
+    fetchMovements,
   }
 })
