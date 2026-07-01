@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useAdminStore, type AuditEntry, type AuditLogEntry, type AdminUser, type AccessRequest, type ResponderRequest, type Responder, type AnnouncementCategory, type Announcement } from '../stores/admin'
+import { useAdminStore, type AuditLogEntry, type AdminUser, type AccessRequest, type ResponderRequest, type HubRequest, type Responder, type AnnouncementCategory, type Announcement } from '../stores/admin'
+import { useHubsStore } from '../stores/hubs'
 import { useToast } from '../lib/toast'
 import BaseButton from '../components/BaseButton.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
@@ -10,8 +11,8 @@ import Loader from '../components/Loader.vue'
 const { t } = useI18n()
 const toast = useToast()
 const admin = useAdminStore()
+const hubsStore = useHubsStore()
 
-const audit = ref<AuditEntry[]>([])
 const activity = ref<AuditLogEntry[]>([])
 const admins = ref<AdminUser[]>([])
 const requests = ref<AccessRequest[]>([])
@@ -34,6 +35,46 @@ const requestSent = ref(false)
 const responderRequests = ref<ResponderRequest[]>([])
 const responders = ref<Responder[]>([])
 const searchQuery = ref('')
+
+// New-center request approval state
+const hubRequests = ref<HubRequest[]>([])
+
+// Manual add form state
+const showAddForm = ref(false)
+const addForm = ref({ email: '', name: '', role: 'coordinator' as 'coordinator' | 'rescuer', hubId: '', hubName: '' })
+const addingResponder = ref(false)
+
+async function submitAddResponder() {
+  if (!addForm.value.email.trim() || !addForm.value.name.trim()) return
+  addingResponder.value = true
+  const r = await admin.addResponder(
+    addForm.value.email.trim(),
+    addForm.value.name.trim(),
+    addForm.value.role,
+    addForm.value.hubId || undefined,
+    addForm.value.hubName || undefined,
+  )
+  addingResponder.value = false
+  if (r.ok) {
+    toast.success(t('admin.addResponderSuccess'))
+    addForm.value = { email: '', name: '', role: 'coordinator', hubId: '', hubName: '' }
+    showAddForm.value = false
+    await loadTabSpecificData('responders-roster')
+  } else if (r.error === 'already_exists' || r.error === 'already_admin') {
+    toast.error(t('admin.addResponderAlreadyExists'))
+  } else {
+    toast.error(r.error || t('common.error'))
+  }
+}
+
+// Sync hub fields when a hub is selected from the picker
+function onHubPick(hubId: string) {
+  const hub = hubsStore.hubs.find(h => h.id === hubId)
+  addForm.value.hubId = hubId
+  addForm.value.hubName = hub?.name || ''
+}
+
+onMounted(() => { hubsStore.fetchAll() })
 
 const filteredResponders = computed(() => {
   const q = searchQuery.value.toLowerCase().trim()
@@ -60,7 +101,10 @@ const tabs = computed<Tab[]>(() => {
     { id: 'responders-roster', label: t('admin.tabRespondersRoster'), icon: 'group', role: 'admin' },
   ]
   if (admin.isCommand) {
-    list.unshift({ id: 'coordinator-requests', label: t('admin.tabCoordinatorRequests'), icon: 'admin_panel_settings', role: 'admin' })
+    list.unshift(
+      { id: 'coordinator-requests', label: t('admin.tabCoordinatorRequests'), icon: 'admin_panel_settings', role: 'admin' },
+      { id: 'hub-requests', label: t('admin.tabHubRequests'), icon: 'storefront', role: 'admin' },
+    )
     list.push(
       { id: 'coordinators-manage', label: t('admin.tabCoordinatorsManage'), icon: 'shield', role: 'admin' },
       { id: 'announcements', label: t('admin.tabAnnouncements'), icon: 'campaign', role: 'admin' },
@@ -89,6 +133,9 @@ async function loadTabSpecificData(tab: string) {
       requests.value = rq.data.requests
       for (const x of requests.value) if (!reqRole.value[x.email]) reqRole.value[x.email] = 'admin'
     }
+  } else if (tab === 'hub-requests') {
+    const hr = await admin.listHubRequests()
+    if (hr.ok) hubRequests.value = hr.data.requests
   } else if (tab === 'coordinators-manage') {
     const u = await admin.listAdmins()
     if (u.ok) admins.value = u.data.users
@@ -98,8 +145,6 @@ async function loadTabSpecificData(tab: string) {
   } else if (tab === 'audit-log') {
     const act = await admin.fetchActivity()
     if (act.ok) activity.value = act.data.entries
-    const a = await admin.fetchAudit()
-    if (a.ok) audit.value = a.data.entries
   }
 }
 
@@ -154,6 +199,18 @@ async function approveResponder(email: string) {
 async function denyResponder(email: string) {
   const r = await admin.denyResponderRequest(email)
   if (r.ok) { await loadTabSpecificData('responder-requests'); toast.success(t('common.saved')) }
+  else toast.error(r.error || t('common.error'))
+}
+
+// New-center request approvals
+async function approveHub(email: string) {
+  const r = await admin.approveHubRequest(email)
+  if (r.ok) { await loadTabSpecificData('hub-requests'); await hubsStore.fetchAll(); toast.success(t('common.saved')) }
+  else toast.error(r.error || t('common.error'))
+}
+async function denyHub(email: string) {
+  const r = await admin.denyHubRequest(email)
+  if (r.ok) { await loadTabSpecificData('hub-requests'); toast.success(t('common.saved')) }
   else toast.error(r.error || t('common.error'))
 }
 async function revokeResponder(email: string) {
@@ -421,6 +478,86 @@ async function removeAlert(id: string) {
               </tbody>
             </table>
           </div>
+
+          <!-- Manual add form (admin only) -->
+          <div v-if="admin.isAdmin" class="pt-2">
+            <button
+              @click="showAddForm = !showAddForm"
+              class="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              <MaterialIcon :name="showAddForm ? 'remove' : 'add'" :size="18" />
+              {{ t('admin.addResponderTitle') }}
+            </button>
+
+            <div v-if="showAddForm" class="mt-4 bg-slate-50 rounded-2xl ring-1 ring-slate-200 p-5 space-y-4">
+              <h3 class="text-sm font-bold text-slate-800">{{ t('admin.addResponderTitle') }}</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Email -->
+                <div class="space-y-1">
+                  <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('admin.addResponderEmail') }} *</label>
+                  <input
+                    v-model="addForm.email"
+                    type="email"
+                    :placeholder="t('admin.adminsEmailPlaceholder')"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+                <!-- Name -->
+                <div class="space-y-1">
+                  <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('admin.addResponderName') }} *</label>
+                  <input
+                    v-model="addForm.name"
+                    type="text"
+                    placeholder="Ej: Ana Martínez"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+                <!-- Role -->
+                <div class="space-y-1">
+                  <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('admin.addResponderRole') }}</label>
+                  <select
+                    v-model="addForm.role"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  >
+                    <option value="coordinator">{{ t('roles.coordinator') }}</option>
+                    <option value="rescuer">{{ t('roles.rescuer') }}</option>
+                  </select>
+                </div>
+                <!-- Hub picker -->
+                <div class="space-y-1">
+                  <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('admin.addResponderHub') }}</label>
+                  <select
+                    :value="addForm.hubId"
+                    @change="onHubPick(($event.target as HTMLSelectElement).value)"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  >
+                    <option value="">— {{ t('admin.addResponderHub') }} —</option>
+                    <option v-for="hub in hubsStore.hubs" :key="hub.id" :value="hub.id">
+                      {{ hub.name }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <div class="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  @click="showAddForm = false"
+                  class="px-4 py-2 rounded-xl text-sm font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  {{ t('common.cancel') }}
+                </button>
+                <BaseButton
+                  :disabled="addingResponder || !addForm.email.trim() || !addForm.name.trim()"
+                  @click="submitAddResponder"
+                >
+                  <span class="flex items-center gap-1.5">
+                    <MaterialIcon name="person_add" :size="16" />
+                    {{ t('admin.addResponderSubmit') }}
+                  </span>
+                </BaseButton>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Tab: Solicitudes de Coordinadores (Command only) -->
@@ -464,6 +601,58 @@ async function removeAlert(id: string) {
                 </select>
                 <BaseButton @click="approve(r.email)">{{ t('admin.reqApprove') }}</BaseButton>
                 <BaseButton variant="neutral" @click="deny(r.email)">{{ t('admin.reqDeny') }}</BaseButton>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Tab: Solicitudes de Centros Nuevos (Command only) -->
+        <div v-if="activeTab === 'hub-requests' && admin.isCommand" class="space-y-4 animate-fadeIn">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold text-slate-900">{{ t('admin.tabHubRequests') }}</h2>
+            <BaseButton variant="neutral" @click="loadTabSpecificData('hub-requests')">
+              <span class="flex items-center gap-1"><MaterialIcon name="refresh" :size="16" /> Actualizar</span>
+            </BaseButton>
+          </div>
+          <p v-if="hubRequests.length === 0" class="text-sm text-slate-500 bg-slate-50 p-6 rounded-2xl text-center border border-slate-100">
+            {{ t('admin.hubRequestsEmpty') }}
+          </p>
+          <ul v-else class="space-y-3">
+            <li v-for="r in hubRequests" :key="r.email" class="bg-white p-5 rounded-2xl shadow-sm ring-1 ring-slate-200 space-y-3">
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <div class="font-bold text-slate-900 truncate">{{ r.hubName }}</div>
+                  <div class="text-xs text-slate-500 mt-0.5">{{ t('admin.hubRequestAddress') }}: {{ r.address }}</div>
+                  <div class="text-xs text-slate-500 mt-0.5">{{ t('admin.hubRequestContact') }}: {{ r.contactName }} ({{ r.contactPhone }})</div>
+                  <div class="text-xs text-slate-400 mt-1">{{ t('admin.colName') }}: {{ r.name }} · <span class="font-mono">{{ r.email }}</span></div>
+                  <div v-if="r.phone" class="text-xs text-slate-600 mt-1 flex items-center gap-1 flex-wrap">
+                    <MaterialIcon name="phone" :size="14" />
+                    <span>{{ r.phone }}</span>
+                    <a
+                      :href="`https://wa.me/${r.phone.replace(/\D/g, '')}`"
+                      target="_blank"
+                      class="inline-flex items-center gap-0.5 ml-2 text-indigo-600 hover:text-indigo-800 font-semibold"
+                    >
+                      <MaterialIcon name="chat" :size="12" />
+                      <span>{{ t('admin.chatWhatsApp') }}</span>
+                    </a>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-1">Solicitado: {{ new Date(r.requestedAt).toLocaleString() }}</div>
+                </div>
+                <span class="rounded px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-700 shrink-0">
+                  {{ r.hubType === 'mobile' ? 'Móvil' : 'Estático' }}
+                </span>
+              </div>
+              <p v-if="r.note" class="text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 italic">
+                "{{ r.note }}"
+              </p>
+              <div class="flex items-center gap-2 pt-1">
+                <BaseButton size="small" @click="approveHub(r.email)">
+                  <span class="flex items-center gap-1"><MaterialIcon name="check" :size="16" /> {{ t('admin.reqApprove') }}</span>
+                </BaseButton>
+                <BaseButton size="small" variant="neutral" @click="denyHub(r.email)">
+                  <span class="flex items-center gap-1"><MaterialIcon name="close" :size="16" /> {{ t('admin.reqDeny') }}</span>
+                </BaseButton>
               </div>
             </li>
           </ul>
@@ -570,32 +759,6 @@ async function removeAlert(id: string) {
                     </td>
                     <td class="px-4 py-3 font-mono text-xs text-slate-800">{{ e.action }}</td>
                     <td class="px-4 py-3 text-slate-500 font-mono text-xs">{{ e.targetType ? e.targetType + ':' + e.targetId : '—' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Historical Vouch audit log -->
-          <div class="space-y-4 border-t border-slate-200 pt-6">
-            <h2 class="text-lg font-bold text-slate-900">Registro histórico de avales (Vouch Audit)</h2>
-            <p v-if="audit.length === 0" class="text-sm text-slate-500 bg-slate-50 p-6 rounded-2xl text-center border border-slate-100">
-              {{ t('admin.auditEmpty') }}
-            </p>
-            <div v-else class="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-              <table class="w-full text-left text-sm divide-y divide-slate-200">
-                <thead class="bg-slate-50 text-xs font-bold text-slate-500 uppercase">
-                  <tr>
-                    <th class="px-4 py-3">{{ t('admin.colVoucher') }}</th>
-                    <th class="px-4 py-3">{{ t('admin.colVouchee') }}</th>
-                    <th class="px-4 py-3">{{ t('admin.colTime') }}</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                  <tr v-for="(e, i) in audit" :key="i" class="hover:bg-slate-50/50">
-                    <td class="px-4 py-3 text-slate-800">{{ e.voucher }}</td>
-                    <td class="px-4 py-3 text-slate-800">{{ e.voucheeDni }}</td>
-                    <td class="px-4 py-3 text-slate-500 text-xs">{{ new Date(e.timestamp).toLocaleString() }}</td>
                   </tr>
                 </tbody>
               </table>

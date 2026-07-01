@@ -116,6 +116,23 @@ export const hospitalInputSchema = z.object({
   imageBase64: z.string().optional(),
 });
 
+// Self-service request to open a new center (any signed-in user). On approval
+// the hub is created from these fields and the requester becomes its coordinator.
+export const hubRequestSchema = z.object({
+  phone: z.string().min(5),
+  note: z.string().max(500).optional(),
+  hubName: z.string().min(3),
+  address: z.string().min(3),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  contactName: z.string().min(2),
+  contactPhone: z.string().min(5),
+  whatsappGroup: z.string().optional(),
+  hubType: z.enum(["static", "mobile"]).optional(),
+  offersShelter: z.boolean().optional(),
+  shelterCapacity: z.number().int().nonnegative().optional(),
+});
+
 export const hubCreateSchema = z.object({
   name: z.string().min(3),
   address: z.string().min(3),
@@ -157,6 +174,15 @@ export const inventoryAdjustSchema = z.object({
 
 export const hubCoordinatorSchema = z.object({
   email: z.string().email(),
+});
+
+// Manually add a coordinator or rescuer without a request flow (admin only).
+export const manualResponderSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).max(120).optional(),
+  role: z.enum(["coordinator", "rescuer"]),
+  hubId: z.string().optional(),
+  hubName: z.string().optional(),
 });
 
 // Confirmar una necesidad (Workstream 3) — proofUrl opcional (solo un enlace).

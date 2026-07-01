@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, RouterLink } from 'vue-router'
 import { useHubsStore, type InventoryItem, type InventoryMovement, type HubNeed, type NeedUrgency, type NeedCreatePayload } from '../stores/hubs'
 import { useSessionStore } from '../stores/session'
-import { useAdminStore, type AdminUser } from '../stores/admin'
+import { useAdminStore, type Responder } from '../stores/admin'
 import { useToast } from '../lib/toast'
 import Loader from '../components/Loader.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
@@ -186,22 +186,22 @@ const newCoordinatorEmail = ref('')
 const addingCoordinator = ref(false)
 const updatingDetails = ref(false)
 
-const adminUsers = ref<AdminUser[]>([])
-const loadingAdminUsers = ref(false)
+const coordinatorUsers = ref<Responder[]>([])
+const loadingCoordinatorUsers = ref(false)
 
-async function fetchAdminUsers() {
-  loadingAdminUsers.value = true
-  const res = await admin.listAdmins()
+async function fetchCoordinatorUsers() {
+  loadingCoordinatorUsers.value = true
+  const res = await admin.listResponders()
   if (res.ok) {
-    adminUsers.value = res.data.users
+    coordinatorUsers.value = res.data.responders.filter((u) => u.role === 'coordinator')
   }
-  loadingAdminUsers.value = false
+  loadingCoordinatorUsers.value = false
 }
 
 onMounted(async () => {
   await hubsStore.fetchAll()
   await fetchLogs()
-  await fetchAdminUsers()
+  await fetchCoordinatorUsers()
 })
 
 async function fetchLogs() {
@@ -961,7 +961,7 @@ async function onRemoveCoordinator(email: string) {
               >
                 <option value="" disabled>{{ t('hubs.coordinatorEmailPlaceholder') }}</option>
                 <option 
-                  v-for="u in adminUsers" 
+                  v-for="u in coordinatorUsers" 
                   :key="u.email" 
                   :value="u.email"
                 >

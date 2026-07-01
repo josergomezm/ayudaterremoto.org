@@ -5,10 +5,10 @@ import { auth, googleProvider } from '../lib/firebase'
 import { adminFetch } from '../lib/adminApi'
 import type { Role } from './session'
 
-export interface AuditEntry { voucher: string; voucheeDni: string; timestamp: string }
 export interface AdminUser { email: string; role: 'admin' | 'sudo' }
 export interface AccessRequest { email: string; name: string; phone: string; note?: string; requestedAt: string }
 export interface ResponderRequest { email: string; name: string; phone: string; note?: string; requestedAt: string; requestedRole?: 'rescuer' | 'coordinator'; brigade?: string; brigadeRole?: string; requestedHubId?: string; requestedHubName?: string }
+export interface HubRequest { email: string; name: string; phone: string; note?: string; requestedAt: string; hubName: string; address: string; lat: number; lng: number; contactName: string; contactPhone: string; whatsappGroup?: string; hubType?: 'static' | 'mobile'; offersShelter?: boolean; shelterCapacity?: number }
 export interface Responder { email: string; name?: string; role: string; brigade?: string; brigadeRole?: string; joinedHubId?: string; joinedHubName?: string; updatedAt?: string }
 export interface AuditLogEntry {
   action: string
@@ -55,8 +55,6 @@ export const useAdminStore = defineStore('admin', () => {
     role.value = null
   }
 
-  const generateCode = () => adminFetch<{ code: string }>('/vouch/generate', { method: 'POST' })
-  const fetchAudit = () => adminFetch<{ entries: AuditEntry[] }>('/vouch/audit')
   const fetchActivity = () => adminFetch<{ entries: AuditLogEntry[] }>('/admin/audit')
   const listAdmins = () => adminFetch<{ users: AdminUser[] }>('/admin/users')
   const setAdmin = (email: string, r: AdminUser['role']) =>
@@ -86,16 +84,26 @@ export const useAdminStore = defineStore('admin', () => {
   const denyResponderRequest = (email: string) =>
     adminFetch('/admin/responder-requests/deny', { method: 'POST', body: JSON.stringify({ email }) })
   
+  // New-center requests (Organizador+)
+  const listHubRequests = () => adminFetch<{ requests: HubRequest[] }>('/admin/hub-requests')
+  const approveHubRequest = (email: string) =>
+    adminFetch<{ hub: unknown }>('/admin/hub-requests/approve', { method: 'POST', body: JSON.stringify({ email }) })
+  const denyHubRequest = (email: string) =>
+    adminFetch('/admin/hub-requests/deny', { method: 'POST', body: JSON.stringify({ email }) })
+
   // Responders Roster (Authority+)
   const listResponders = () => adminFetch<{ responders: Responder[] }>('/admin/responders')
+  const addResponder = (email: string, name: string, role: 'coordinator' | 'rescuer', hubId?: string, hubName?: string) =>
+    adminFetch<{ user: Responder }>('/admin/responders/add', { method: 'POST', body: JSON.stringify({ email, name, role, hubId, hubName }) })
   const removeResponder = (email: string) =>
     adminFetch('/admin/responders/remove', { method: 'POST', body: JSON.stringify({ email }) })
 
   return {
     user, role, ready, isAdmin, isCommand, isSudo,
-    signIn, signOut, generateCode, fetchAudit, fetchActivity, listAdmins, setAdmin, removeAdmin, broadcast,
+    signIn, signOut, fetchActivity, listAdmins, setAdmin, removeAdmin, broadcast,
     listAnnouncements, deleteAnnouncement,
     requestAccess, myRequest, listRequests, approveRequest, denyRequest,
-    listResponderRequests, approveResponderRequest, denyResponderRequest, listResponders, removeResponder,
+    listResponderRequests, approveResponderRequest, denyResponderRequest, listResponders, addResponder, removeResponder,
+    listHubRequests, approveHubRequest, denyHubRequest,
   }
 })

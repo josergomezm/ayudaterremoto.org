@@ -6,8 +6,8 @@ const es = {
   },
   civilian: {
     heading: 'Tienes acceso de Colaborador',
-    body: 'Puedes reportar emergencias. Si un organizador te da un código de aval, puedes convertirte en Coordinador.',
-    cta: 'Ingresar código de aval',
+    body: 'Puedes reportar emergencias. Para coordinar un centro, solicita acceso desde el portal.',
+    cta: 'Solicitar acceso',
   },
   dismiss: 'Entendido',
 }
@@ -20,8 +20,8 @@ const en: typeof es = {
   },
   civilian: {
     heading: 'You have Collaborator access',
-    body: 'You can file emergency reports. If an organizer gives you a vouch code, you can become a Coordinator.',
-    cta: 'Enter vouch code',
+    body: 'You can file emergency reports. To coordinate a center, request access from the portal.',
+    cta: 'Request access',
   },
   dismiss: 'Got it',
 }

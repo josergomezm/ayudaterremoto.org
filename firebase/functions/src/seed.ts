@@ -13,7 +13,7 @@ import { db } from "./firebase";
 import { logger } from "firebase-functions/v2";
 import type { Incident, AdminRole, InventoryCategory, InventoryMovement, HubNeed } from "./types";
 
-/** Idempotently seed demo incidents, an alert, and a vouch code. */
+/** Idempotently seed demo incidents and an alert. */
 export async function seedDemoData(): Promise<void> {
   const meta = db.doc("meta/seed");
   if ((await meta.get()).exists) return;
@@ -33,7 +33,6 @@ export async function seedDemoData(): Promise<void> {
     message: "Réplica posible en las próximas horas. Aléjese de estructuras dañadas y de fachadas, postes y cables caídos. Si está dentro de un edificio con daños, evacúe con calma por las escaleras —nunca el ascensor— y diríjase a un punto abierto. Mantenga este canal abierto para nuevas instrucciones.",
     createdAt: now,
   });
-  batch.set(db.doc("vouchCodes/DEMO1234"), { code: "DEMO1234", used: false, voucher: "seed", createdAt: now });
   batch.set(meta, { seededAt: now });
   await batch.commit();
 }

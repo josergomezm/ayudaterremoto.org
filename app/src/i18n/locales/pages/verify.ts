@@ -52,6 +52,21 @@ const es = {
   brigadeSaveError: 'Error al actualizar información de brigada.',
   requestHubLabel: 'Centro o Brigada que desea unirse (Opcional)',
   requestHubPlaceholder: '-- Ninguno (Petición Global) --',
+  // New-center request (coordinator opens a brand-new center)
+  hubRequestToggle: '¿Vas a abrir un centro nuevo?',
+  hubRequestTitle: 'Solicitar apertura de un nuevo centro',
+  hubRequestDesc: 'Si no existe un centro donde vas a coordinar, solicita que se cree uno. Al aprobarse, quedarás asignado como su coordinador.',
+  hubRequestNameLabel: 'Nombre del centro',
+  hubRequestNamePlaceholder: 'ej. Centro Plaza Bolívar',
+  hubRequestAddressLabel: 'Dirección',
+  hubRequestAddressPlaceholder: 'ej. Av. Principal, frente a la plaza',
+  hubRequestContactNameLabel: 'Nombre de contacto',
+  hubRequestContactPhoneLabel: 'Teléfono de contacto (WhatsApp)',
+  hubRequestPickLocation: 'Seleccionar ubicación en el mapa',
+  hubRequestSubmit: 'Solicitar apertura de centro',
+  hubRequestPending: 'Solicitud de centro enviada. Pendiente de aprobación por un Organizador.',
+  hubRequestSuccess: 'Solicitud de centro enviada correctamente.',
+  hubRequestMissingLocation: 'Debes seleccionar una ubicación en el mapa.',
 }
 
 const en: typeof es = {
@@ -108,6 +123,21 @@ const en: typeof es = {
   brigadeSaveError: 'Error updating brigade information.',
   requestHubLabel: 'Hub or Brigade to join (Optional)',
   requestHubPlaceholder: '-- None (Global Request) --',
+  // New-center request (coordinator opens a brand-new center)
+  hubRequestToggle: 'Opening a brand-new center?',
+  hubRequestTitle: 'Request a new center',
+  hubRequestDesc: "If the center you'll coordinate doesn't exist yet, request that one be created. Once approved, you'll be assigned as its coordinator.",
+  hubRequestNameLabel: 'Center name',
+  hubRequestNamePlaceholder: 'e.g. Plaza Bolívar Center',
+  hubRequestAddressLabel: 'Address',
+  hubRequestAddressPlaceholder: 'e.g. Main Ave, across the plaza',
+  hubRequestContactNameLabel: 'Contact name',
+  hubRequestContactPhoneLabel: 'Contact phone (WhatsApp)',
+  hubRequestPickLocation: 'Select location on the map',
+  hubRequestSubmit: 'Request center opening',
+  hubRequestPending: 'Center request sent. Pending approval by an Organizer.',
+  hubRequestSuccess: 'Center request submitted successfully.',
+  hubRequestMissingLocation: 'You must select a location on the map.',
 }
 
 export default { es, en }

@@ -38,7 +38,7 @@ const es = {
       },
       coordinator: {
         name: 'Coordinador',
-        desc: 'Te dieron un código de aval. Puedes actualizar estados y gestionar tu centro.',
+        desc: 'Tu solicitud fue aprobada. Puedes actualizar estados y gestionar tu centro.',
       },
       admin: {
         name: 'Organizador',
@@ -98,7 +98,7 @@ const en: typeof es = {
       },
       coordinator: {
         name: 'Coordinator',
-        desc: 'You were given a vouch code. You can update statuses and manage your center.',
+        desc: 'Your request was approved. You can update statuses and manage your center.',
       },
       admin: {
         name: 'Organizer',

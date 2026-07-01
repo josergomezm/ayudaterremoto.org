@@ -94,24 +94,6 @@ export const useSessionStore = defineStore('session', () => {
     brigadeRole.value = null
   }
 
-  async function redeemVouch(code: string): Promise<{ ok: boolean; error?: string }> {
-    const fbUser = auth.currentUser
-    if (!fbUser) return { ok: false, error: 'Inicie sesión primero' }
-    const token = await fbUser.getIdToken()
-    const res = await apiFetch<{ role: Role }>('/verify/redeem-vouch', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ vouchCode: code }),
-    })
-    if (res.ok) {
-      role.value = res.data.role
-      return { ok: true }
-    }
-    return { ok: false, error: res.error }
-  }
-
   async function requestResponder(phone: string, note: string, requestedRole?: 'rescuer' | 'coordinator', requestedBrigade?: string, requestedBrigadeRole?: string, requestedHubId?: string | null, requestedHubName?: string | null): Promise<{ ok: boolean; error?: string }> {
     const fbUser = auth.currentUser
     if (!fbUser) return { ok: false, error: 'Inicie sesión primero' }
@@ -125,6 +107,48 @@ export const useSessionStore = defineStore('session', () => {
     })
     if (res.ok) return { ok: true }
     return { ok: false, error: res.error }
+  }
+
+  async function requestHub(payload: {
+    phone: string
+    note: string
+    hubName: string
+    address: string
+    lat: number
+    lng: number
+    contactName: string
+    contactPhone: string
+    whatsappGroup?: string
+    hubType?: 'static' | 'mobile'
+    offersShelter?: boolean
+    shelterCapacity?: number
+  }): Promise<{ ok: boolean; error?: string }> {
+    const fbUser = auth.currentUser
+    if (!fbUser) return { ok: false, error: 'Inicie sesión primero' }
+    const token = await fbUser.getIdToken()
+    const res = await apiFetch<{ status: string }>('/verify/hub-request', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload),
+    })
+    if (res.ok) return { ok: true }
+    return { ok: false, error: res.error }
+  }
+
+  async function checkHubRequest(): Promise<{ ok: boolean; status: string | null; error?: string }> {
+    const fbUser = auth.currentUser
+    if (!fbUser) return { ok: false, status: null, error: 'Inicie sesión primero' }
+    const token = await fbUser.getIdToken()
+    const res = await apiFetch<{ status: string | null }>('/verify/hub-request', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+    })
+    if (res.ok) return { ok: true, status: res.data.status }
+    return { ok: false, status: null, error: res.error }
   }
 
   async function checkResponderRequest(): Promise<{ ok: boolean; status: string | null; error?: string }> {
@@ -162,6 +186,6 @@ export const useSessionStore = defineStore('session', () => {
 
   return {
     user, role, name, email, brigade, brigadeRole, joinedHubId, joinedHubName, ready, isVerified, can,
-    signIn, signOut, redeemVouch, requestResponder, checkResponderRequest, updateBrigadeInfo
+    signIn, signOut, requestResponder, checkResponderRequest, requestHub, checkHubRequest, updateBrigadeInfo
   }
 })

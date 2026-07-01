@@ -5,6 +5,7 @@ import { useSessionStore } from '../stores/session'
 import { useHubsStore } from '../stores/hubs'
 import BaseButton from '../components/BaseButton.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
+import LocationPickerMap from '../components/LocationPickerMap.vue'
 
 const { t, tm, rt } = useI18n()
 const session = useSessionStore()
@@ -20,12 +21,34 @@ const requestStatus = ref<string | null>(null)
 const hubsStore = useHubsStore()
 const selectedHubId = ref('')
 
+// "Opening a new center" — only relevant when requesting the coordinator role.
+const openingNewHub = ref(false)
+const newHubForm = ref({
+  name: '',
+  address: '',
+  contactName: '',
+  contactPhone: '',
+  lat: null as number | null,
+  lng: null as number | null,
+})
+const hubRequestStatus = ref<string | null>(null)
+
 // Hub selection is required for field roles (rescuer/coordinator), not for admin+
-const hubRequired = computed(() => requestRole.value === 'rescuer' || requestRole.value === 'coordinator')
-const canSubmitRequest = computed(() =>
-  requestPhone.value.trim().length >= 5 &&
-  (!hubRequired.value || selectedHubId.value !== '')
-)
+const hubRequired = computed(() => (requestRole.value === 'rescuer' || requestRole.value === 'coordinator') && !openingNewHub.value)
+const canSubmitRequest = computed(() => {
+  if (requestPhone.value.trim().length < 5) return false
+  if (openingNewHub.value) {
+    return !!newHubForm.value.name.trim() && !!newHubForm.value.address.trim() &&
+      !!newHubForm.value.contactName.trim() && !!newHubForm.value.contactPhone.trim() &&
+      newHubForm.value.lat !== null && newHubForm.value.lng !== null
+  }
+  return !hubRequired.value || selectedHubId.value !== ''
+})
+
+function onNewHubLocation(loc: { lat: number; lng: number }) {
+  newHubForm.value.lat = loc.lat
+  newHubForm.value.lng = loc.lng
+}
 
 async function loadRequestStatus() {
   if (session.role === 'civilian') {
@@ -34,6 +57,10 @@ async function loadRequestStatus() {
       const res = await session.checkResponderRequest()
       if (res.ok) {
         requestStatus.value = res.status
+      }
+      const hubRes = await session.checkHubRequest()
+      if (hubRes.ok) {
+        hubRequestStatus.value = hubRes.status
       }
     } catch (err) {
       console.error(err)
@@ -48,6 +75,7 @@ watch(() => [session.role, session.isVerified], () => {
     loadRequestStatus()
   } else {
     requestStatus.value = null
+    hubRequestStatus.value = null
   }
 }, { immediate: true })
 
@@ -92,6 +120,34 @@ async function doSubmitRequest() {
   busy.value = true
   message.value = null
   messageType.value = null
+
+  if (openingNewHub.value) {
+    const res = await session.requestHub({
+      phone: requestPhone.value,
+      note: requestNote.value,
+      hubName: newHubForm.value.name.trim(),
+      address: newHubForm.value.address.trim(),
+      lat: newHubForm.value.lat as number,
+      lng: newHubForm.value.lng as number,
+      contactName: newHubForm.value.contactName.trim(),
+      contactPhone: newHubForm.value.contactPhone.trim(),
+    })
+    busy.value = false
+    if (res.ok) {
+      message.value = t('verify.hubRequestSuccess')
+      messageType.value = 'success'
+      hubRequestStatus.value = 'pending'
+      requestNote.value = ''
+      requestPhone.value = ''
+      newHubForm.value = { name: '', address: '', contactName: '', contactPhone: '', lat: null, lng: null }
+      openingNewHub.value = false
+    } else {
+      message.value = res.error || t('verify.failed')
+      messageType.value = 'error'
+    }
+    return
+  }
+
   const targetHub = hubsStore.hubs.find(h => h.id === selectedHubId.value)
   const targetHubName = targetHub ? targetHub.name : null
   const res = await session.requestResponder(requestPhone.value, requestNote.value, requestRole.value, '', '', selectedHubId.value || null, targetHubName)
@@ -281,13 +337,13 @@ function getRoleLabel(role: string) {
 
         <!-- Volunteer/Coordinator Request Flow -->
         <div v-if="session.role === 'civilian'" class="space-y-4">
-          <!-- Pending State -->
-          <div v-if="requestStatus === 'pending'" class="card bg-[var(--amber-bg)] border border-[var(--line)] space-y-2 text-[var(--amber-c)]">
+          <!-- Pending State (responder or hub request) -->
+          <div v-if="requestStatus === 'pending' || hubRequestStatus === 'pending'" class="card bg-[var(--amber-bg)] border border-[var(--line)] space-y-2 text-[var(--amber-c)]">
             <div class="flex items-center gap-2 font-bold">
               <MaterialIcon name="pending" class="text-[var(--amber-dot)] animate-pulse" :size="20" />
-              <span class="text-sm">{{ t('verify.requestTitle') }}</span>
+              <span class="text-sm">{{ hubRequestStatus === 'pending' ? t('verify.hubRequestTitle') : t('verify.requestTitle') }}</span>
             </div>
-            <p class="text-xs leading-relaxed font-semibold">{{ t('verify.requestPending') }}</p>
+            <p class="text-xs leading-relaxed font-semibold">{{ hubRequestStatus === 'pending' ? t('verify.hubRequestPending') : t('verify.requestPending') }}</p>
           </div>
 
           <!-- Request Form -->
@@ -313,8 +369,42 @@ function getRoleLabel(role: string) {
                   <option value="coordinator">{{ t('verify.roleCoordinador') }}</option>
                 </select>
               </div>
-              <!-- Hub/Brigade selection: required for rescuer & coordinator -->
-              <div class="space-y-1.5">
+
+              <!-- "Opening a new center" toggle — only for coordinator requests -->
+              <label v-if="requestRole === 'coordinator'" class="flex items-center gap-2 cursor-pointer">
+                <input v-model="openingNewHub" type="checkbox" class="h-4 w-4 rounded border-[var(--line)] text-[var(--primary)] cursor-pointer" />
+                <span class="text-xs font-bold text-[var(--ink)]">{{ t('verify.hubRequestToggle') }}</span>
+              </label>
+
+              <!-- New-center fields -->
+              <div v-if="requestRole === 'coordinator' && openingNewHub" class="space-y-3 rounded-xl border border-[var(--line)] bg-white p-3">
+                <p class="text-xs text-[var(--ink2)] leading-relaxed">{{ t('verify.hubRequestDesc') }}</p>
+                <div class="space-y-1.5">
+                  <label class="block text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('verify.hubRequestNameLabel') }} *</label>
+                  <input v-model="newHubForm.name" type="text" :placeholder="t('verify.hubRequestNamePlaceholder')" class="input-field" />
+                </div>
+                <div class="space-y-1.5">
+                  <label class="block text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('verify.hubRequestAddressLabel') }} *</label>
+                  <input v-model="newHubForm.address" type="text" :placeholder="t('verify.hubRequestAddressPlaceholder')" class="input-field" />
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="space-y-1.5">
+                    <label class="block text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('verify.hubRequestContactNameLabel') }} *</label>
+                    <input v-model="newHubForm.contactName" type="text" class="input-field" />
+                  </div>
+                  <div class="space-y-1.5">
+                    <label class="block text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('verify.hubRequestContactPhoneLabel') }} *</label>
+                    <input v-model="newHubForm.contactPhone" type="text" class="input-field" />
+                  </div>
+                </div>
+                <div class="space-y-1.5">
+                  <label class="block text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">{{ t('verify.hubRequestPickLocation') }} *</label>
+                  <LocationPickerMap :lat="newHubForm.lat" :lng="newHubForm.lng" @update:location="onNewHubLocation" />
+                </div>
+              </div>
+
+              <!-- Hub/Brigade selection: required for rescuer & coordinator (unless opening a new one) -->
+              <div v-if="!(requestRole === 'coordinator' && openingNewHub)" class="space-y-1.5">
                 <label class="block text-[10px] font-bold text-[var(--ink2)] uppercase tracking-wider">
                   {{ t('verify.requestHubLabel') }}
                   <span v-if="hubRequired" class="text-[var(--red-dot)] ml-0.5">*</span>
@@ -339,7 +429,7 @@ function getRoleLabel(role: string) {
                 />
               </div>
               <BaseButton block :disabled="busy || !canSubmitRequest" @click="doSubmitRequest">
-                {{ t('verify.requestButton') }}
+                {{ openingNewHub ? t('verify.hubRequestSubmit') : t('verify.requestButton') }}
               </BaseButton>
             </div>
           </div>

@@ -12,19 +12,6 @@ export const ROLE_RANK: Record<Role, number> = {
   civilian: 0, rescuer: 1, coordinator: 2, admin: 3, sudo: 4,
 };
 
-export interface VouchCode {
-  code: string;
-  used: boolean;
-  voucher: string;     // admin email/id that issued it
-  createdAt: string;
-}
-
-export interface VouchAuditEntry {
-  voucher: string;     // admin who issued the redeemed code
-  voucheeEmail: string; // field user who redeemed it
-  timestamp: string;
-}
-
 export interface AdminUser {
   email: string;
   role: AdminRole;
@@ -49,6 +36,26 @@ export interface ResponderRequest {
   brigadeRole?: string;
   requestedHubId?: string | null;
   requestedHubName?: string | null;
+}
+
+// Request to open a brand-new center. On approval, a resourceHub is created
+// from these fields and the requester becomes its first coordinator.
+export interface HubRequest {
+  email: string;
+  name: string;
+  phone: string;
+  note?: string;
+  requestedAt: string;
+  hubName: string;
+  address: string;
+  lat: number;
+  lng: number;
+  contactName: string;
+  contactPhone: string;
+  whatsappGroup?: string | null;
+  hubType?: "static" | "mobile";
+  offersShelter?: boolean;
+  shelterCapacity?: number;
 }
 
 export interface Incident {

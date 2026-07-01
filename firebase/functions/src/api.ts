@@ -1,7 +1,7 @@
 import { onRequest, type Request } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { defineSecret } from "firebase-functions/params";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { z, ZodError } from "zod";
 
 import { applyCors } from "./helpers/cors";
@@ -18,6 +18,25 @@ const CLUSTER_RADIUS_M = 60;
 // Una necesidad "tomada" sin confirmar pasado este lapso se marca staleClaim (WS3).
 const NEED_STALE_MS = 2 * 24 * 60 * 60 * 1000; // 2 días
 const IS_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true";
+
+/**
+ * Add `email` to a hub's `coordinators` array if not already present. Shared by
+ * the responder-request approval flow and the manual add-responder endpoint —
+ * both promote someone into an existing hub's coordinator list the same way.
+ */
+async function addHubCoordinator(hubId: string, email: string, name: string): Promise<void> {
+  const key = email.toLowerCase();
+  const hubRef = db.doc(`resourceHubs/${hubId}`);
+  const hubSnap = await hubRef.get();
+  if (!hubSnap.exists) return;
+  const hubData = hubSnap.data() as any;
+  const coordinators = hubData.coordinators || [];
+  const exists = coordinators.some((c: any) => c.email.toLowerCase() === key);
+  if (!exists) {
+    coordinators.push({ email: key, name });
+    await hubRef.update({ coordinators, updatedAt: new Date().toISOString() });
+  }
+}
 
 async function getCoordinatorHubIds(email: string): Promise<string[]> {
   const emailKey = email.toLowerCase();
@@ -65,7 +84,7 @@ async function resolveClusterId(
   return ownId;
 }
 import type {
-  Incident, Announcement, VouchCode, AdminUser, AccessRequest, ResponderRequest, MissingPerson, LocationRequest, AdmittedPatient,
+  Incident, Announcement, AdminUser, AccessRequest, ResponderRequest, HubRequest, MissingPerson, LocationRequest, AdmittedPatient,
   ResourceHub, InventoryItem, HubLog, InventoryMovement, MovementLine, HubNeed,
 } from "./types";
 import {
@@ -75,7 +94,7 @@ import {
   locationRequestSchema, locationResolveSchema, admittedPatientSchema, hospitalInputSchema,
   hubCreateSchema, hubUpdateSchema, inventoryUpsertSchema, inventoryAdjustSchema, hubCoordinatorSchema,
   needConfirmSchema, needCreateSchema, needUpdateSchema, updateBrigadeSchema, assignmentUpdateSchema, reverifySchema, resolveOutcomeSchema,
-  movementSchema,
+  movementSchema, manualResponderSchema, hubRequestSchema,
 } from "./models";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
@@ -107,10 +126,6 @@ function publicIncident(i: Incident, viewer: Actor | null) {
   return rest;
 }
 
-function newVouchCode(): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous 0/O/1/I
-  return Array.from(randomBytes(8), (b) => alphabet[b % alphabet.length]).join("");
-}
 
 export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets: [GEMINI_API_KEY] }, async (req, res) => {
   applyCors(req, res);
@@ -151,34 +166,11 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       return send(200, { role: actor.role, email: actor.id, name: actor.name, brigade, brigadeRole, joinedHubId, joinedHubName });
     }
 
-    // ── Redeem vouch code (any Google-authenticated user) ────────────────
+    // ── Redeem vouch code (any Google-authenticated user) — DEPRECATED ──
+    // Flow replaced by responder-request. Kept as a tombstone so old links
+    // return a clear error instead of falling through to 404.
     if (m === "POST" && path === "/verify/redeem-vouch") {
-      const fbUser = await getFirebaseUser(req);
-      if (!fbUser) return send(401, { error: "unauthenticated", message: "Inicie sesión con Google primero." });
-
-      const { vouchCode } = z.object({ vouchCode: z.string().min(1) }).parse(req.body);
-      const codeRef = db.doc(`vouchCodes/${vouchCode.toUpperCase()}`);
-      const codeSnap = await codeRef.get();
-      const vc = codeSnap.exists ? (codeSnap.data() as VouchCode) : null;
-      if (!vc || vc.used) return send(400, { error: "invalid_vouch_code", message: "Código de aval inválido o ya usado." });
-
-      // Check if user is already an admin
-      const adminSnap = db.doc(`adminUsers/${fbUser.email}`);
-      const adminDoc = await adminSnap.get();
-      if (adminDoc.exists) {
-        return send(400, { error: "already_admin", message: "Ya eres administrador." });
-      }
-
-      // Upgrade role to coordinador in users collection
-      const userRef = db.doc(`users/${fbUser.email}`);
-      await userRef.set({ email: fbUser.email, role: "coordinator", name: fbUser.name, updatedAt: new Date().toISOString() });
-
-      // Mark vouch code as used
-      await codeRef.update({ used: true });
-      await db.collection("vouchAudit").add({ voucher: vc.voucher, voucheeEmail: fbUser.email, timestamp: new Date().toISOString() });
-      await logAudit({ id: fbUser.email, role: "coordinator", kind: "field" }, "vouch_redeem", { type: "vouchCode", id: vouchCode.toUpperCase() }, { voucher: vc.voucher });
-
-      return send(200, { role: "coordinator" });
+      return send(410, { error: "deprecated", message: "El flujo de códigos de aval fue reemplazado. Solicita acceso desde la app." });
     }
 
     // ── Admin: who am I (role gate for the portal) ───────────────────────
@@ -336,17 +328,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
 
       // If approved as coordinator for a specific hub, add them to the hub's coordinators list
       if (approvedRole === "coordinator" && targetHubId) {
-        const hubRef = db.doc(`resourceHubs/${targetHubId}`);
-        const hubSnap = await hubRef.get();
-        if (hubSnap.exists) {
-          const hubData = hubSnap.data() as any;
-          const coordinators = hubData.coordinators || [];
-          const exists = coordinators.some((c: any) => c.email.toLowerCase() === key);
-          if (!exists) {
-            coordinators.push({ email: key, name: userName });
-            await hubRef.update({ coordinators, updatedAt: new Date().toISOString() });
-          }
-        }
+        await addHubCoordinator(targetHubId, key, userName);
       }
 
       await db.doc(`users/${key}`).set({
@@ -387,6 +369,118 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       
       await db.doc(`responderRequests/${key}`).delete();
       await logAudit(actor, "responder_deny", { type: "responderRequest", id: key });
+      return send(200, { denied: key });
+    }
+
+    // ── Self-service new-center request (any signed-in Google user) ──────
+    // A coordinator-to-be asks to open a center; on approval the hub is
+    // created and the requester is added as its first coordinator — no
+    // separate "create hub" + "add coordinator" steps needed.
+    if (path === "/verify/hub-request") {
+      const fbUser = await getFirebaseUser(req);
+      if (!fbUser) return send(401, { error: "unauthenticated" });
+
+      const actor = await getActor(req);
+      if (actor && hasRole(actor, "coordinator")) {
+        return send(400, { error: "already_responder", message: "Ya eres Coordinador o superior." });
+      }
+
+      const ref = db.doc(`hubRequests/${fbUser.email}`);
+      if (m === "POST") {
+        const body = hubRequestSchema.parse(req.body);
+        const reqDoc: HubRequest = {
+          email: fbUser.email,
+          name: fbUser.name,
+          phone: body.phone,
+          note: body.note,
+          requestedAt: new Date().toISOString(),
+          hubName: body.hubName,
+          address: body.address,
+          lat: body.lat,
+          lng: body.lng,
+          contactName: body.contactName,
+          contactPhone: body.contactPhone,
+          whatsappGroup: body.whatsappGroup || null,
+          hubType: body.hubType || "static",
+          offersShelter: body.offersShelter || false,
+          shelterCapacity: body.shelterCapacity || 0,
+        };
+        await ref.set(reqDoc);
+        await logAudit({ id: fbUser.email, role: "civilian", kind: "user" }, "hub_request", { type: "hubRequest", id: fbUser.email }, { hubName: body.hubName });
+        return send(200, { status: "pending" });
+      }
+      if (m === "GET") {
+        const snap = await ref.get();
+        return send(200, { status: snap.exists ? "pending" : null });
+      }
+    }
+
+    // ── New-center requests management (Organizador+) ─────────────────────
+    if (m === "GET" && path === "/admin/hub-requests") {
+      const actor = await getActor(req);
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
+      const q = await db.collection("hubRequests").get();
+      return send(200, { requests: q.docs.map((d) => d.data() as HubRequest) });
+    }
+    if (m === "POST" && path === "/admin/hub-requests/approve") {
+      const actor = await getActor(req);
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
+      const { email } = adminEmailSchema.parse(req.body);
+      const key = email.toLowerCase();
+
+      const reqSnap = await db.doc(`hubRequests/${key}`).get();
+      if (!reqSnap.exists) return send(404, { error: "not_found", message: "Solicitud no encontrada." });
+      const reqData = reqSnap.data() as HubRequest;
+      const userName = reqData.name || key;
+
+      const hubId = randomUUID();
+      const now = new Date().toISOString();
+      const hub: ResourceHub = {
+        id: hubId,
+        name: reqData.hubName,
+        address: reqData.address,
+        lat: reqData.lat,
+        lng: reqData.lng,
+        contactName: reqData.contactName,
+        contactPhone: reqData.contactPhone,
+        whatsappGroup: reqData.whatsappGroup || undefined,
+        hubType: reqData.hubType || "static",
+        offersShelter: reqData.offersShelter || false,
+        shelterCapacity: reqData.shelterCapacity || 0,
+        status: "active",
+        createdBy: key,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await db.doc(`resourceHubs/${hubId}`).set({
+        ...hub,
+        coordinators: [{ email: key, name: userName }],
+      });
+
+      // Promote the requester to coordinator, joined to the new hub — same
+      // shape as the responder-request approval flow.
+      await db.doc(`users/${key}`).set({
+        email: key,
+        role: "coordinator",
+        name: userName,
+        joinedHubId: hubId,
+        joinedHubName: hub.name,
+        brigade: null,
+        brigadeRole: null,
+        updatedAt: now,
+      }, { merge: true });
+
+      await db.doc(`hubRequests/${key}`).delete();
+      await logAudit(actor, "hub_request_approve", { type: "resourceHub", id: hubId }, { email: key, hubName: hub.name });
+      return send(200, { hub: { ...hub, coordinators: [{ email: key, name: userName }] } });
+    }
+    if (m === "POST" && path === "/admin/hub-requests/deny") {
+      const actor = await getActor(req);
+      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
+      const { email } = adminEmailSchema.parse(req.body);
+      const key = email.toLowerCase();
+      await db.doc(`hubRequests/${key}`).delete();
+      await logAudit(actor, "hub_request_deny", { type: "hubRequest", id: key });
       return send(200, { denied: key });
     }
  
@@ -452,23 +546,43 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       return send(200, { removed: key });
     }
 
-    // ── Vouch code generation (Authority+) ───────────────────────────────
-    if (m === "POST" && path === "/vouch/generate") {
+
+    // ── Manually add a coordinator/rescuer (admin only, no request needed) ─
+    if (m === "POST" && path === "/admin/responders/add") {
       const actor = await getActor(req);
       if (!hasRole(actor, "admin")) return send(403, { error: "forbidden", message: "Requiere rol Organizador." });
-      const code = newVouchCode();
-      const doc: VouchCode = { code, used: false, voucher: actor!.id, createdAt: new Date().toISOString() };
-      await db.doc(`vouchCodes/${code}`).set(doc);
-      await logAudit(actor, "vouch_generate", { type: "vouchCode", id: code });
-      return send(200, { code });
-    }
+      const { email, name, role: responderRole, hubId, hubName } = manualResponderSchema.parse(req.body);
+      const key = email.toLowerCase();
 
-    // ── Vouch audit log (Command) ────────────────────────────────────────
-    if (m === "GET" && path === "/vouch/audit") {
-      const actor = await getActor(req);
-      if (!hasRole(actor, "admin")) return send(403, { error: "forbidden" });
-      const q = await db.collection("vouchAudit").orderBy("timestamp", "desc").limit(200).get();
-      return send(200, { entries: q.docs.map((d) => d.data()) });
+      // Must not already be an admin-tier user
+      const adminSnap = await db.doc(`adminUsers/${key}`).get();
+      if (adminSnap.exists) return send(400, { error: "already_admin", message: "Este correo ya tiene un rol de Organizador o Fundador." });
+
+      // Must not already be a field-tier user (responder/coordinator) — this
+      // endpoint writes users/{key} with .set(), which would otherwise silently
+      // overwrite an existing role and hub assignment.
+      const userSnap = await db.doc(`users/${key}`).get();
+      if (userSnap.exists) return send(400, { error: "already_exists", message: "Este correo ya tiene un rol asignado en el sistema." });
+
+      // Write to users collection (same shape as the approval flow)
+      await db.doc(`users/${key}`).set({
+        email: key,
+        role: responderRole,
+        name: name || key,
+        joinedHubId: hubId || null,
+        joinedHubName: hubName || null,
+        brigade: null,
+        brigadeRole: null,
+        updatedAt: new Date().toISOString(),
+      });
+
+      // If assigning as coordinator for a specific hub, add to hub's coordinators list
+      if (responderRole === "coordinator" && hubId) {
+        await addHubCoordinator(hubId, key, name || key);
+      }
+
+      await logAudit(actor, "responder_add_manual", { type: "user", id: key }, { role: responderRole, hubId: hubId || null });
+      return send(200, { user: { email: key, role: responderRole, name: name || key, joinedHubId: hubId || null, joinedHubName: hubName || null } });
     }
 
     // ── Full activity / audit log (Command) ──────────────────────────────
@@ -1350,10 +1464,10 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         return send(200, { movements: q.docs.map((d) => d.data() as InventoryMovement) });
       }
 
-      // POST /hubs/:id/coordinators — Add coordinator
+      // POST /hubs/:id/coordinators — Add coordinator (hub creator/coordinator or admin/sudo)
       if (m === "POST" && seg.length === 3 && seg[2] === "coordinators") {
         const actor = await getActor(req);
-        if (!hasRole(actor, "admin")) return send(403, { error: "forbidden", message: "Requiere rol Organizador." });
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
         if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
         const { email } = hubCoordinatorSchema.parse(req.body);
         const key = email.toLowerCase();
