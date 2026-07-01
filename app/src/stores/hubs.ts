@@ -11,6 +11,7 @@ export interface InventoryItem {
   quantity: number
   unit: string
   urgency: 'available' | 'low' | 'depleted'
+  updatedAt: string
   // Need lifecycle (WS3)
   status?: NeedStatus
   claimedBy?: string | null
