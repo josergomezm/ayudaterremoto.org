@@ -5,11 +5,12 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "vue-tsc -b && vite build",
+    "build:capacitor": "vue-tsc -b && vite build --mode capacitor",
     "preview": "vite preview",
     "lint": "eslint .",
-    "cap:sync": "npm run build && cap sync",
-    "cap:ios": "npm run build && cap sync ios && cap open ios",
-    "cap:android": "npm run build && cap sync android && cap open android",
+    "cap:sync": "npm run build:capacitor && cap sync",
+    "cap:ios": "npm run build:capacitor && cap sync ios && cap open ios",
+    "cap:android": "npm run build:capacitor && cap sync android && cap open android",
     "cap:assets": "capacitor-assets generate"
   },
   "dependencies": {
