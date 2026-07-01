@@ -1,0 +1,16 @@
+# El repo usa LF. Herramientas de Windows estaban volteando el working tree a
+# CRLF y ensuciando el diff. Forzamos LF en todo lo que sea texto; los binarios
+# se dejan intactos.
+* text=auto eol=lf
+
+# Binarios (nunca normalizar)
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary
