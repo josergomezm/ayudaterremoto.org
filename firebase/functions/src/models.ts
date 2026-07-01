@@ -164,6 +164,17 @@ export const needConfirmSchema = z.object({
   proofUrl: z.string().url().optional(),
 });
 
+// Necesidad manual: la crea/edita a mano el coordinador (no deriva del stock).
+export const needCreateSchema = z.object({
+  title: z.string().min(1).max(120),
+  description: z.string().max(500).optional(),
+  category: z.enum(["water", "food", "tools", "medical", "shelter", "clothing", "hygiene", "other"]),
+  quantity: z.number().positive().optional(),
+  unit: z.string().max(30).optional(),
+  urgency: z.enum(["alta", "media", "baja"]),
+});
+export const needUpdateSchema = needCreateSchema.partial();
+
 // Movimiento de inventario ("lote"): entrada o salida, multi-ítem, con razón.
 // Cada línea referencia un ítem existente (itemId) o define uno nuevo (name/category/unit).
 const movementLineSchema = z

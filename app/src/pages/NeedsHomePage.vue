@@ -4,7 +4,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
-import { useHubsStore, type InventoryItem, type ResourceHub } from '../stores/hubs'
+import { useHubsStore, type HubNeed, type ResourceHub } from '../stores/hubs'
 import { useSessionStore } from '../stores/session'
 import { useAdminStore } from '../stores/admin'
 import { useOnline } from '../composables/useOnline'
@@ -31,10 +31,10 @@ const openOnly = ref(true)
 const view = ref<'list' | 'map'>('list')
 const activeTab = ref<'my-zone' | 'global'>('my-zone')
 
-const URGENCY_RANK: Record<string, number> = { depleted: 0, low: 1, available: 2 }
+const URGENCY_RANK: Record<string, number> = { alta: 0, media: 1, baja: 2 }
 const CATEGORIES = ['water', 'food', 'medical', 'tools', 'shelter', 'clothing', 'hygiene', 'other']
 
-interface Need { item: InventoryItem; hub: ResourceHub }
+interface Need { item: HubNeed; hub: ResourceHub }
 
 function canManage(hub: ResourceHub): boolean {
   if (admin.isAdmin) return true
@@ -44,10 +44,11 @@ function canManage(hub: ResourceHub): boolean {
 const myZone = computed<ResourceHub | undefined>(() =>
   hubs.activeHubs.find((h) => h.createdBy === session.email || (h.coordinators ?? []).some((c) => c.email === session.email)),
 )
-const isOpen = (i: InventoryItem) => (i.status ?? 'abierta') !== 'tomada' && (i.status ?? 'abierta') !== 'confirmada'
+const isOpen = (i: HubNeed) => (i.status ?? 'abierta') !== 'tomada' && (i.status ?? 'abierta') !== 'confirmada'
 
+// Índice global: todas las necesidades de todos los centros activos.
 const allNeeds = computed<Need[]>(() =>
-  hubs.activeHubs.flatMap((hub) => hub.inventory.map((item) => ({ item, hub }))),
+  hubs.activeHubs.flatMap((hub) => (hub.needs ?? []).map((item) => ({ item, hub }))),
 )
 
 const filtered = computed<Need[]>(() => {
@@ -59,12 +60,12 @@ const filtered = computed<Need[]>(() => {
       if (fCategory.value && item.category !== fCategory.value) return false
       if (fZone.value && hub.id !== fZone.value) return false
       if (fHubType.value !== 'all' && (hub.hubType || 'static') !== fHubType.value) return false
-      if (q && !(`${item.name} ${hub.name}`.toLowerCase().includes(q))) return false
+      if (q && !(`${item.title} ${hub.name}`.toLowerCase().includes(q))) return false
       return true
     })
     .sort((a, b) =>
       (URGENCY_RANK[a.item.urgency] ?? 3) - (URGENCY_RANK[b.item.urgency] ?? 3) ||
-      a.item.name.localeCompare(b.item.name),
+      a.item.title.localeCompare(b.item.title),
     )
 })
 
@@ -73,7 +74,7 @@ const openCount = computed(() => allNeeds.value.filter((n) => isOpen(n.item)).le
 
 // Vista coordinador (su propia zona)
 const zoneNeeds = computed<Need[]>(() =>
-  myZone.value ? myZone.value.inventory.map((item) => ({ item, hub: myZone.value as ResourceHub })) : [],
+  myZone.value ? (myZone.value.needs ?? []).map((item) => ({ item, hub: myZone.value as ResourceHub })) : [],
 )
 const zoneOpen = computed(() => zoneNeeds.value.filter((n) => isOpen(n.item)).length)
 const zoneConfirmed = computed(() => zoneNeeds.value.filter((n) => n.item.status === 'confirmada').length)
@@ -136,7 +137,7 @@ function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value
         <div class="section-label">{{ t('home.inMyZone') }}</div>
         <div class="list">
           <NeedCard v-for="n in zoneNeeds" :key="n.item.id" :item="n.item" :hub="n.hub" mode="coordinator" />
-          <div v-if="zoneNeeds.length === 0" class="muted">{{ t('hubs.emptyInventory') }}</div>
+          <div v-if="zoneNeeds.length === 0" class="muted">{{ t('needs.emptyManage') }}</div>
         </div>
       </div>
 
@@ -166,10 +167,10 @@ function clearFilters() { fUrgency.value = ''; fCategory.value = ''; fZone.value
           </label>
           <label class="chip chip--select">
             <select v-model="fUrgency">
-              <option value="">{{ t('home.urgency') }}</option>
-              <option value="depleted">{{ t('hubs.urgency.depleted') }}</option>
-              <option value="low">{{ t('hubs.urgency.low') }}</option>
-              <option value="available">{{ t('hubs.urgency.available') }}</option>
+              <option value="">{{ t('needs.allUrgencies') }}</option>
+              <option value="alta">{{ t('needs.urgency.alta') }}</option>
+              <option value="media">{{ t('needs.urgency.media') }}</option>
+              <option value="baja">{{ t('needs.urgency.baja') }}</option>
             </select>
             <MaterialIcon name="expand_more" :size="18" />
           </label>

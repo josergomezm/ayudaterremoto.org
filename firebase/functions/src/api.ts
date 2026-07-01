@@ -66,7 +66,7 @@ async function resolveClusterId(
 }
 import type {
   Incident, Announcement, VouchCode, AdminUser, AccessRequest, ResponderRequest, MissingPerson, LocationRequest, AdmittedPatient,
-  ResourceHub, InventoryItem, HubLog, InventoryMovement, MovementLine,
+  ResourceHub, InventoryItem, HubLog, InventoryMovement, MovementLine, HubNeed,
 } from "./types";
 import {
   echoSchema,
@@ -74,7 +74,7 @@ import {
   adminUserSchema, adminEmailSchema, accessRequestSchema, missingPersonSchema, missingFoundSchema,
   locationRequestSchema, locationResolveSchema, admittedPatientSchema, hospitalInputSchema,
   hubCreateSchema, hubUpdateSchema, inventoryUpsertSchema, inventoryAdjustSchema, hubCoordinatorSchema,
-  needConfirmSchema, updateBrigadeSchema, assignmentUpdateSchema, reverifySchema, resolveOutcomeSchema,
+  needConfirmSchema, needCreateSchema, needUpdateSchema, updateBrigadeSchema, assignmentUpdateSchema, reverifySchema, resolveOutcomeSchema,
   movementSchema,
 } from "./models";
 
@@ -1099,6 +1099,19 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
           const mineConfirm = !!viewer && !!confirmedBy && viewer.id === confirmedBy;
           return { ...pub, status, staleClaim, mineClaim, mineConfirm };
         });
+        // Necesidades manuales (creadas por el coordinador, NO derivadas del stock).
+        const needSnap = await db.collection(`resourceHubs/${hub.id}/needs`).get();
+        const needs = needSnap.docs.map((nv) => {
+          const nd = nv.data() as HubNeed;
+          const status = nd.status ?? "abierta";
+          const staleClaim = status === "tomada" && !!nd.claimedAt &&
+            (Date.now() - new Date(nd.claimedAt).getTime() > NEED_STALE_MS);
+          const { claimedBy, confirmedBy, ...pub } = nd;
+          const mineClaim = !!viewer && !!claimedBy && viewer.id === claimedBy;
+          const mineConfirm = !!viewer && !!confirmedBy && viewer.id === confirmedBy;
+          return { ...pub, status, staleClaim, mineClaim, mineConfirm };
+        });
+
         const logSnap = await db.collection(`resourceHubs/${hub.id}/logs`).orderBy("timestamp", "desc").limit(5).get();
         const recentLogs = logSnap.docs.map((lg) => lg.data() as HubLog);
 
@@ -1106,8 +1119,8 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         // (ahí los escribe la aprobación; la subcolección quedó en desuso).
         const hubCoordinators = (hub as { coordinators?: { email: string; name?: string }[] }).coordinators;
         const coordinators = Array.isArray(hubCoordinators) ? hubCoordinators : [];
-        
-        hubs.push({ ...hub, inventory, recentLogs, coordinators });
+
+        hubs.push({ ...hub, inventory, needs, recentLogs, coordinators });
       }
       return send(200, { hubs });
     }
@@ -1209,6 +1222,68 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         await logAudit(actor, "hub_inventory_adjust", { type: "resourceHub", id: hubId }, { itemId, delta: body.delta, action: body.action });
         const updatedItem: InventoryItem = { ...item, quantity: newQuantity, urgency, updatedAt: now };
         return send(200, { item: updatedItem });
+      }
+
+      // POST /hubs/:id/needs — crear necesidad manual (coordinador)
+      if (m === "POST" && seg.length === 3 && seg[2] === "needs") {
+        const actor = await getActor(req);
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+        if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
+        const body = needCreateSchema.parse(req.body);
+        const needId = randomUUID();
+        const now = new Date().toISOString();
+        const need: HubNeed = {
+          id: needId, hubId,
+          title: body.title.trim(),
+          description: body.description?.trim() || undefined,
+          category: body.category,
+          quantity: body.quantity ?? null,
+          unit: body.unit?.trim() || null,
+          urgency: body.urgency,
+          status: "abierta", reopenedCount: 0,
+          createdBy: actor!.id, createdByName: actor!.name || actor!.id,
+          createdAt: now, updatedAt: now,
+        };
+        await db.doc(`resourceHubs/${hubId}/needs/${needId}`).set(need);
+        await logAudit(actor, "hub_need_create", { type: "resourceHub", id: hubId }, { needId, title: need.title });
+        return send(201, { need });
+      }
+
+      // PATCH /hubs/:id/needs/:needId — editar necesidad (coordinador)
+      if (m === "PATCH" && seg.length === 4 && seg[2] === "needs") {
+        const actor = await getActor(req);
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+        if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
+        const needId = seg[3];
+        const needRef = db.doc(`resourceHubs/${hubId}/needs/${needId}`);
+        const snap = await needRef.get();
+        if (!snap.exists) return send(404, { error: "not_found", message: "Necesidad no encontrada." });
+        const body = needUpdateSchema.parse(req.body);
+        const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+        if (body.title !== undefined) updates.title = body.title.trim();
+        if (body.description !== undefined) updates.description = body.description.trim() || null;
+        if (body.category !== undefined) updates.category = body.category;
+        if (body.quantity !== undefined) updates.quantity = body.quantity ?? null;
+        if (body.unit !== undefined) updates.unit = body.unit.trim() || null;
+        if (body.urgency !== undefined) updates.urgency = body.urgency;
+        await needRef.update(updates);
+        const need = { ...(snap.data() as HubNeed), ...updates };
+        await logAudit(actor, "hub_need_update", { type: "resourceHub", id: hubId }, { needId });
+        return send(200, { need });
+      }
+
+      // DELETE /hubs/:id/needs/:needId — borrar necesidad (coordinador)
+      if (m === "DELETE" && seg.length === 4 && seg[2] === "needs") {
+        const actor = await getActor(req);
+        if (!hasRole(actor, "coordinator")) return send(403, { error: "forbidden", message: "Requiere rol Coordinador." });
+        if (!(await isHubCoordinator(hubId, actor!.id))) return send(403, { error: "forbidden", message: "No es coordinador de esta zona." });
+        const needId = seg[3];
+        const needRef = db.doc(`resourceHubs/${hubId}/needs/${needId}`);
+        const snap = await needRef.get();
+        if (!snap.exists) return send(404, { error: "not_found", message: "Necesidad no encontrada." });
+        await needRef.delete();
+        await logAudit(actor, "hub_need_delete", { type: "resourceHub", id: hubId }, { needId });
+        return send(200, { deleted: needId });
       }
 
       // GET /hubs/:id/logs — Fetch hub activity log
@@ -1319,7 +1394,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       }
     }
 
-    // ── Needs lifecycle (WS3): un ítem de inventario es una necesidad ──────
+    // ── Needs lifecycle (WS3): la necesidad es una entidad propia (manual) ──
     // abierta → (claim) → tomada → (confirm) → confirmada ; (reopen) vuelve a abierta.
     if (seg[0] === "needs" && seg.length === 3) {
       const needId = seg[1];
@@ -1327,13 +1402,13 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
       const actor = await getActor(req);
       if (!actor) return send(401, { error: "unauthenticated", message: "Inicie sesión." });
 
-      // Los ítems viven en resourceHubs/{hubId}/inventory/{itemId}; los hallamos por
-      // collection-group y obtenemos el hubId del path padre (sin denormalizar).
-      const found = await db.collectionGroup("inventory").where("id", "==", needId).limit(1).get();
+      // Las necesidades viven en resourceHubs/{hubId}/needs/{needId}; las hallamos
+      // por collection-group y sacamos el hubId del path padre.
+      const found = await db.collectionGroup("needs").where("id", "==", needId).limit(1).get();
       if (found.empty) return send(404, { error: "not_found", message: "Necesidad no encontrada." });
       const itemRef = found.docs[0].ref;
       const hubId = itemRef.parent.parent!.id;
-      const item = found.docs[0].data() as InventoryItem;
+      const item = found.docs[0].data() as HubNeed;
       const status = item.status ?? "abierta";
       const now = new Date().toISOString();
 
@@ -1349,7 +1424,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
           eta,
           updatedAt: now 
         });
-        await logAudit(actor, "need_claim", { type: "inventoryItem", id: needId }, { hubId });
+        await logAudit(actor, "need_claim", { type: "hubNeed", id: needId }, { hubId });
         return send(200, { ok: true, status: "tomada" });
       }
 
@@ -1360,7 +1435,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         if (item.claimedBy && item.claimedBy === actor.id) return send(400, { error: "claimer_cannot_confirm", message: "Quien se encargó no puede confirmar su propia entrega." });
         const { proofUrl } = needConfirmSchema.parse(req.body ?? {});
         await itemRef.update({ status: "confirmada", confirmedBy: actor.id, confirmedByName: actor.name ?? actor.id, confirmedAt: now, proofUrl: proofUrl ?? null, updatedAt: now });
-        await logAudit(actor, "need_confirm", { type: "inventoryItem", id: needId }, { hubId });
+        await logAudit(actor, "need_confirm", { type: "hubNeed", id: needId }, { hubId });
         return send(200, { ok: true, status: "confirmada" });
       }
 
@@ -1376,7 +1451,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
           reopenedByName: actor.name ?? actor.id,
           updatedAt: now,
         });
-        await logAudit(actor, "need_reopen", { type: "inventoryItem", id: needId }, { hubId });
+        await logAudit(actor, "need_reopen", { type: "hubNeed", id: needId }, { hubId });
         return send(200, { ok: true, status: "abierta" });
       }
     }
@@ -1408,6 +1483,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
         "GET /hubs/:id/logs",
         "POST /hubs/:id/coordinators", "DELETE /hubs/:id/coordinators/:email",
         "POST /hubs/:id/movements", "GET /hubs/:id/movements",
+        "POST /hubs/:id/needs", "PATCH /hubs/:id/needs/:needId", "DELETE /hubs/:id/needs/:needId",
         "POST /needs/:id/claim", "POST /needs/:id/confirm", "POST /needs/:id/reopen",
       ],
     });

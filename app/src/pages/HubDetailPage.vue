@@ -9,8 +9,7 @@ import Loader from '../components/Loader.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
 import IncidentMap from '../components/IncidentMap.vue'
 import { formatRelativeTime } from '../lib/date'
-import { useToast } from '../lib/toast'
-import type { InventoryItem } from '../stores/hubs'
+import NeedCard from '../components/NeedCard.vue'
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -18,7 +17,6 @@ const router = useRouter()
 const hubsStore = useHubsStore()
 const session = useSessionStore()
 const admin = useAdminStore()
-const toast = useToast()
 
 const hubId = computed(() => String(route.params.id))
 const hub = computed(() => hubsStore.hubs.find(h => h.id === hubId.value))
@@ -66,27 +64,6 @@ const canManage = computed(() => {
   return false
 })
 
-// ── Need lifecycle (WS3) ─────────────────────────────────────────────────
-const canClaim = computed(() => session.isVerified || admin.isAdmin)
-function needStatus(item: InventoryItem) { return item.status || 'abierta' }
-
-async function doClaim(item: InventoryItem) {
-  const eta = window.prompt(t('hubs.promptEta'), '2 horas')
-  if (eta === null) return // User cancelled
-  const r = await hubsStore.claimNeed(hubId.value, item.id, session.name ?? undefined, eta || undefined)
-  if (r.ok) toast.success(t('hubs.needClaimed'))
-  else toast.error(r.error || t('common.error'))
-}
-async function doConfirm(item: InventoryItem) {
-  const r = await hubsStore.confirmNeed(hubId.value, item.id)
-  if (r.ok) toast.success(t('hubs.needConfirmed'))
-  else toast.error(r.error || t('common.error'))
-}
-async function doReopen(item: InventoryItem) {
-  const r = await hubsStore.reopenNeed(hubId.value, item.id)
-  if (r.ok) toast.success(t('hubs.needReopened'))
-  else toast.error(r.error || t('common.error'))
-}
 </script>
 
 <template>
@@ -204,6 +181,20 @@ async function doReopen(item: InventoryItem) {
       </div>
     </div>
 
+    <!-- Necesidades del centro (cualquiera puede ayudar) -->
+    <div v-if="(hub.needs?.length ?? 0) > 0" class="supply-theme rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 space-y-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ t('needs.title') }}</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <NeedCard
+          v-for="need in hub.needs"
+          :key="need.id"
+          :item="need"
+          :hub="hub"
+          :mode="canManage ? 'coordinator' : 'civilian'"
+        />
+      </div>
+    </div>
+
     <!-- Inventory Display -->
     <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 space-y-4">
       <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ t('hubs.inventory') }}</h2>
@@ -245,86 +236,6 @@ async function doReopen(item: InventoryItem) {
             </span>
           </div>
 
-          <!-- Need lifecycle (WS3): abierta → tomada → confirmada -->
-          <div class="mt-2 pt-2 border-t border-slate-200/50 space-y-2">
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span
-                class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset"
-                :class="{
-                  'bg-slate-100 text-slate-700 ring-slate-500/20': needStatus(item) === 'abierta',
-                  'bg-blue-100 text-blue-800 ring-blue-600/20': needStatus(item) === 'tomada',
-                  'bg-emerald-100 text-emerald-800 ring-emerald-600/20': needStatus(item) === 'confirmada'
-                }"
-              >
-                {{ t('hubs.needStatus.' + needStatus(item)) }}
-              </span>
-              <span
-                v-if="item.staleClaim"
-                class="inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20"
-              >
-                <MaterialIcon name="schedule" :size="11" /> {{ t('hubs.needStale') }}
-              </span>
-            </div>
-
-            <!-- abierta → Me encargo -->
-            <button
-              v-if="needStatus(item) === 'abierta' && canClaim"
-              class="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700 cursor-pointer"
-              @click="doClaim(item)"
-            >
-              <MaterialIcon name="volunteer_activism" :size="14" /> {{ t('hubs.needClaim') }}
-            </button>
-
-            <!-- tomada → quién se encargó + WhatsApp + (coordinador) confirmar/reabrir -->
-            <template v-else-if="needStatus(item) === 'tomada'">
-              <p class="text-[11px] text-slate-600 inline-flex items-center gap-1">
-                <MaterialIcon name="person" :size="12" class="text-slate-400" />
-                {{ t('hubs.needClaimedBy', { name: item.claimedByName || t('hubs.needSomeone') }) }}
-              </p>
-              <p v-if="item.eta" class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200/50 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1 mt-1 mb-2">
-                <MaterialIcon name="schedule" :size="11" />
-                <span>ETA: {{ item.eta }}</span>
-              </p>
-              <a
-                :href="getWhatsAppContactUrl(hub.contactPhone)"
-                target="_blank"
-                class="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 cursor-pointer"
-              >
-                <MaterialIcon name="chat" :size="14" /> {{ t('hubs.whatsappContact') }}
-              </a>
-              <div v-if="canManage" class="flex gap-2">
-                <button
-                  class="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-emerald-700 px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-800 cursor-pointer"
-                  @click="doConfirm(item)"
-                >
-                  <MaterialIcon name="check" :size="14" /> {{ t('hubs.needConfirm') }}
-                </button>
-                <button
-                  class="inline-flex items-center justify-center gap-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200 cursor-pointer"
-                  @click="doReopen(item)"
-                >
-                  {{ t('hubs.needReopen') }}
-                </button>
-              </div>
-            </template>
-
-            <!-- confirmada → badge + comprobante + (coordinador) reabrir -->
-            <template v-else-if="needStatus(item) === 'confirmada'">
-              <p class="text-[11px] font-medium text-emerald-700 inline-flex items-center gap-1">
-                <MaterialIcon name="task_alt" :size="12" /> {{ t('hubs.needConfirmedLabel') }}
-              </p>
-              <a v-if="item.proofUrl" :href="item.proofUrl" target="_blank" class="block text-[11px] text-indigo-600 underline">
-                {{ t('hubs.needProof') }}
-              </a>
-              <button
-                v-if="canManage"
-                class="w-full inline-flex items-center justify-center gap-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200 cursor-pointer"
-                @click="doReopen(item)"
-              >
-                {{ t('hubs.needReopen') }}
-              </button>
-            </template>
-          </div>
         </div>
       </div>
     </div>

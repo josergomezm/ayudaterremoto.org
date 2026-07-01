@@ -11,7 +11,7 @@
 
 import { db } from "./firebase";
 import { logger } from "firebase-functions/v2";
-import type { Incident, AdminRole, InventoryCategory, InventoryMovement } from "./types";
+import type { Incident, AdminRole, InventoryCategory, InventoryMovement, HubNeed } from "./types";
 
 /** Idempotently seed demo incidents, an alert, and a vouch code. */
 export async function seedDemoData(): Promise<void> {
@@ -220,6 +220,43 @@ export async function seedInventoryMovementsDemo(): Promise<void> {
   await marker.set({ seededAt: today });
 }
 
+/**
+ * Demo de NECESIDADES manuales (desacopladas del inventario). Las crea "el
+ * coordinador" a mano: título libre, urgencia manual (alta/media/baja) y el
+ * lifecycle abierta → tomada → confirmada. Cubre los 3 estados y las 3
+ * urgencias en contexto de cocina/acopio. Aditiva e idempotente
+ * (marcador propio `meta/needsDemo`). Solo emulador. Depende de seedSupplyDemo.
+ */
+export async function seedNeedsDemo(): Promise<void> {
+  const marker = db.doc("meta/needsDemo");
+  if ((await marker.get()).exists) return;
+
+  const catia = db.doc("resourceHubs/zona-catia");
+  if (!(await catia.get()).exists) return; // depende de seedSupplyDemo
+  const maiqExists = (await db.doc("resourceHubs/zona-maiquetia").get()).exists;
+
+  const nowMs = Date.now();
+  const daysAgo = (d: number) => new Date(nowMs - d * 24 * 3600 * 1000).toISOString();
+
+  const needs: HubNeed[] = [
+    // Refugio Catia La Mar (coordinadora María González)
+    { id: "need-verduras-catia", hubId: "zona-catia", title: "Verduras para la sopa del mediodía", description: "Zanahoria, papa, auyama — para 120 platos.", category: "food", quantity: 15, unit: "kg", urgency: "alta", status: "abierta", reopenedCount: 0, createdBy: "maria@demo.com", createdByName: "María González", createdAt: daysAgo(0), updatedAt: daysAgo(0) },
+    { id: "need-envases-catia", hubId: "zona-catia", title: "Envases para llevar comida", description: "Potes con tapa para el reparto.", category: "other", quantity: 200, unit: "unidades", urgency: "media", status: "abierta", reopenedCount: 0, createdBy: "maria@demo.com", createdByName: "María González", createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { id: "need-gas-catia", hubId: "zona-catia", title: "Bombona de gas para cocinar", category: "other", quantity: 2, unit: "bombonas", urgency: "alta", status: "tomada", claimedBy: "carlos@demo.com", claimedByName: "Carlos Pérez", claimedAt: daysAgo(0), eta: "Hoy en la tarde", reopenedCount: 0, createdBy: "maria@demo.com", createdByName: "María González", createdAt: daysAgo(1), updatedAt: daysAgo(0) },
+    { id: "need-voluntarios-catia", hubId: "zona-catia", title: "Voluntarios para servir y limpiar", category: "other", quantity: 5, unit: "personas", urgency: "baja", status: "abierta", reopenedCount: 0, createdBy: "maria@demo.com", createdByName: "María González", createdAt: daysAgo(2), updatedAt: daysAgo(2) },
+    // Brigada Móvil Maiquetía (coordinador Carlos Pérez)
+    { id: "need-agua-maiq", hubId: "zona-maiquetia", title: "Agua potable", category: "water", quantity: 100, unit: "botellas", urgency: "alta", status: "confirmada", claimedByName: "Pedro Ramos", confirmedBy: "carlos@demo.com", confirmedByName: "Carlos Pérez", confirmedAt: daysAgo(0), reopenedCount: 0, createdBy: "carlos@demo.com", createdByName: "Carlos Pérez", createdAt: daysAgo(2), updatedAt: daysAgo(0) },
+    { id: "need-cloro-maiq", hubId: "zona-maiquetia", title: "Cloro y jabón para limpieza", category: "hygiene", urgency: "media", status: "abierta", reopenedCount: 0, createdBy: "carlos@demo.com", createdByName: "Carlos Pérez", createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+  ];
+
+  for (const nd of needs) {
+    if (nd.hubId === "zona-maiquetia" && !maiqExists) continue;
+    await db.doc(`resourceHubs/${nd.hubId}/needs/${nd.id}`).set(nd);
+  }
+
+  await marker.set({ seededAt: daysAgo(0) });
+}
+
 /** Upsert an admin by email. Defaults to Fundador (rol raíz, solo por seed). */
 export async function ensureAdmin(email: string, role: AdminRole = "sudo"): Promise<void> {
   const key = email.toLowerCase();
@@ -234,9 +271,10 @@ export async function main(): Promise<void> {
     await seedDemoData();
     await seedSupplyDemo();
     await seedInventoryMovementsDemo();
+    await seedNeedsDemo();
     logger.info("seed: demo data written (emulator)");
-    console.log("✓ Demo data seeded (emulator): zonas + necesidades de ejemplo.");
-    console.log("  ↳ Refugio Catia La Mar (zona-catia): inventario + movimientos de ejemplo. Coordinadora: María González <maria@demo.com>.");
+    console.log("✓ Demo data seeded (emulator): zonas + inventario + necesidades manuales.");
+    console.log("  ↳ Refugio Catia La Mar (zona-catia): inventario + movimientos + necesidades. Coordinadora: María González <maria@demo.com>.");
   } else {
     console.log("• No emulator detected (FIRESTORE_EMULATOR_HOST unset) — skipping demo data.");
   }

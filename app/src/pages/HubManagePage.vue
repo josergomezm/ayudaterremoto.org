@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, RouterLink } from 'vue-router'
-import { useHubsStore, type InventoryItem, type InventoryMovement } from '../stores/hubs'
+import { useHubsStore, type InventoryItem, type InventoryMovement, type HubNeed, type NeedUrgency, type NeedCreatePayload } from '../stores/hubs'
 import { useSessionStore } from '../stores/session'
 import { useAdminStore, type AdminUser } from '../stores/admin'
 import { useToast } from '../lib/toast'
@@ -21,7 +21,7 @@ const admin = useAdminStore()
 const hubId = route.params.id as string
 const showMovementModal = ref(false)
 
-const activeTab = ref<'inventory' | 'movements' | 'details' | 'logs' | 'coordinators'>('inventory')
+const activeTab = ref<'inventory' | 'needs' | 'movements' | 'details' | 'logs' | 'coordinators'>('inventory')
 
 const hub = computed(() => {
   return hubsStore.hubs.find(h => h.id === hubId)
@@ -45,6 +45,53 @@ const inventoryView = computed(() => {
 const movementPreselect = ref<InventoryItem | null>(null)
 function openMovement(item?: InventoryItem) { movementPreselect.value = item ?? null; showMovementModal.value = true }
 const rowMenu = ref<string | null>(null)
+
+// ── Necesidades: crear / editar / cerrar (coordinador) ────────────────────
+const NEED_CATEGORIES = ['food', 'water', 'medical', 'hygiene', 'shelter', 'clothing', 'tools', 'other'] as const
+const hubNeeds = computed<HubNeed[]>(() => hub.value?.needs ?? [])
+const openNeedsCount = computed(() => hubNeeds.value.filter((n) => (n.status ?? 'abierta') === 'abierta').length)
+const showNeedForm = ref(false)
+const editingNeedId = ref<string | null>(null)
+const needForm = ref<{ title: string; description: string; category: NeedCreatePayload['category']; quantity: string; unit: string; urgency: NeedUrgency }>({
+  title: '', description: '', category: 'food', quantity: '', unit: '', urgency: 'media',
+})
+function openNeedForm(need?: HubNeed) {
+  if (need) {
+    editingNeedId.value = need.id
+    needForm.value = {
+      title: need.title, description: need.description ?? '', category: need.category,
+      quantity: need.quantity != null ? String(need.quantity) : '', unit: need.unit ?? '', urgency: need.urgency,
+    }
+  } else {
+    editingNeedId.value = null
+    needForm.value = { title: '', description: '', category: 'food', quantity: '', unit: '', urgency: 'media' }
+  }
+  showNeedForm.value = true
+}
+function closeNeedForm() { showNeedForm.value = false; editingNeedId.value = null }
+async function onSaveNeed() {
+  const f = needForm.value
+  if (!f.title.trim()) { toast.error(t('needs.needTitle')); return }
+  const payload: NeedCreatePayload = {
+    title: f.title.trim(),
+    description: f.description.trim() || undefined,
+    category: f.category,
+    quantity: f.quantity ? Number(f.quantity) : undefined,
+    unit: f.unit.trim() || undefined,
+    urgency: f.urgency,
+  }
+  const r = editingNeedId.value
+    ? await hubsStore.updateNeed(hubId, editingNeedId.value, payload)
+    : await hubsStore.createNeed(hubId, payload)
+  if (r.ok) { toast.success(t('needs.saved')); closeNeedForm() }
+  else toast.error((r as { error?: string }).error || t('common.error'))
+}
+async function onDeleteNeed(need: HubNeed) {
+  if (!window.confirm(t('home.closeConfirm'))) return
+  const r = await hubsStore.deleteNeed(hubId, need.id)
+  if (r.ok) toast.success(t('needs.deleted'))
+  else toast.error((r as { error?: string }).error || t('common.error'))
+}
 
 // ── Movimientos: filtro + agrupación por día + resumen semanal ────────────
 const mvFilter = ref<'all' | 'entrada' | 'salida'>('all')
@@ -335,7 +382,7 @@ async function onRemoveCoordinator(email: string) {
       <!-- Navigation Tabs -->
       <div class="flex border-b border-slate-200 gap-1 overflow-x-auto pb-px">
         <button 
-          v-for="tab in ['inventory', 'movements', 'details', 'logs', 'coordinators']"
+          v-for="tab in ['inventory', 'needs', 'movements', 'details', 'logs', 'coordinators']"
           :key="tab"
           @click="activeTab = tab as any"
           class="border-b-2 px-4 py-2 text-sm font-semibold transition-all cursor-pointer whitespace-nowrap"
@@ -344,6 +391,7 @@ async function onRemoveCoordinator(email: string) {
             : 'border-transparent text-slate-500 hover:text-slate-700'"
         >
           <span v-if="tab === 'inventory'">{{ t('hubs.inventory') }}</span>
+          <span v-else-if="tab === 'needs'">{{ t('needs.title') }}</span>
           <span v-else-if="tab === 'movements'">{{ t('movements.history') }}</span>
           <span v-else-if="tab === 'details'">{{ t('hubs.hubDetails') }}</span>
           <span v-else-if="tab === 'logs'">{{ t('hubs.activityLog') }}</span>
@@ -595,6 +643,90 @@ async function onRemoveCoordinator(email: string) {
         </div>
 
         <!-- Tab 2: Hub Details Form -->
+        <!-- ── Pestaña Necesidades (manual, desacoplada del inventario) ── -->
+        <div v-else-if="activeTab === 'needs'" class="space-y-4 supply-theme">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-bold" style="color: var(--ink)">{{ t('needs.manageTitle') }}</h3>
+              <p class="text-sm" style="color: var(--ink2)">{{ t('needs.openCount', { n: openNeedsCount }) }}</p>
+            </div>
+            <button
+              class="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-bold text-white hover:opacity-90"
+              @click="openNeedForm()"
+            >
+              <MaterialIcon name="add" :size="18" /> {{ t('needs.add') }}
+            </button>
+          </div>
+
+          <!-- Form crear / editar -->
+          <div v-if="showNeedForm" class="rounded-2xl border p-4 space-y-3 bg-white" style="border-color: var(--line)">
+            <label class="block">
+              <span class="text-xs font-bold" style="color: var(--ink2)">{{ t('needs.formTitle') }}</span>
+              <input v-model="needForm.title" :placeholder="t('needs.formTitlePlaceholder')" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: var(--line)" />
+            </label>
+            <label class="block">
+              <span class="text-xs font-bold" style="color: var(--ink2)">{{ t('needs.formDescription') }}</span>
+              <textarea v-model="needForm.description" rows="2" :placeholder="t('needs.formDescriptionPlaceholder')" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: var(--line)"></textarea>
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="text-xs font-bold" style="color: var(--ink2)">{{ t('needs.formCategory') }}</span>
+                <select v-model="needForm.category" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white" style="border-color: var(--line)">
+                  <option v-for="c in NEED_CATEGORIES" :key="c" :value="c">{{ t('hubs.categories.' + c) }}</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="text-xs font-bold" style="color: var(--ink2)">{{ t('needs.formUrgency') }}</span>
+                <select v-model="needForm.urgency" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white" style="border-color: var(--line)">
+                  <option value="alta">{{ t('needs.urgency.alta') }}</option>
+                  <option value="media">{{ t('needs.urgency.media') }}</option>
+                  <option value="baja">{{ t('needs.urgency.baja') }}</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="text-xs font-bold" style="color: var(--ink2)">{{ t('needs.formQuantity') }}</span>
+                <input v-model="needForm.quantity" type="number" min="0" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: var(--line)" />
+              </label>
+              <label class="block">
+                <span class="text-xs font-bold" style="color: var(--ink2)">{{ t('needs.formUnit') }}</span>
+                <input v-model="needForm.unit" :placeholder="t('needs.formUnitPlaceholder')" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" style="border-color: var(--line)" />
+              </label>
+            </div>
+            <div class="flex gap-2 pt-1">
+              <button class="rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-bold text-white hover:opacity-90" @click="onSaveNeed">{{ t('needs.save') }}</button>
+              <button class="rounded-xl border px-4 py-2.5 text-sm font-bold" style="border-color: var(--line); color: var(--ink)" @click="closeNeedForm">{{ t('needs.cancel') }}</button>
+            </div>
+          </div>
+
+          <!-- Lista de necesidades -->
+          <div v-if="hubNeeds.length" class="space-y-2">
+            <div v-for="need in hubNeeds" :key="need.id" class="flex items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3" style="border-color: var(--line)">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span
+                    class="rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase"
+                    :class="{
+                      'bg-red-100 text-red-700': need.urgency === 'alta',
+                      'bg-amber-100 text-amber-700': need.urgency === 'media',
+                      'bg-emerald-100 text-emerald-700': need.urgency === 'baja'
+                    }"
+                  >{{ t('needs.urgency.' + need.urgency) }}</span>
+                  <span class="font-bold truncate" style="color: var(--ink)">{{ need.title }}</span>
+                </div>
+                <div class="text-xs mt-0.5" style="color: var(--ink2)">
+                  <span v-if="need.quantity != null">{{ need.quantity }} {{ need.unit }} · </span>
+                  <span>{{ t('hubs.needStatus.' + (need.status ?? 'abierta')) }}</span>
+                </div>
+              </div>
+              <div class="flex gap-1 shrink-0" style="color: var(--ink2)">
+                <button class="rounded-lg p-2 hover:bg-[var(--line2)]" :title="t('needs.edit')" @click="openNeedForm(need)"><MaterialIcon name="edit" :size="18" /></button>
+                <button class="rounded-lg p-2 hover:bg-[var(--line2)]" @click="onDeleteNeed(need)"><MaterialIcon name="delete" :size="18" /></button>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-sm py-6 text-center" style="color: var(--ink2)">{{ t('needs.emptyManage') }}</div>
+        </div>
+
         <div v-else-if="activeTab === 'details'" class="space-y-6">
           <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ t('hubs.hubDetails') }}</h2>
           

@@ -4,13 +4,13 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useHubsStore, type InventoryItem, type ResourceHub } from '../stores/hubs'
+import { useHubsStore, type HubNeed, type ResourceHub } from '../stores/hubs'
 import { useSessionStore } from '../stores/session'
 import { useToast } from '../lib/toast'
 import MaterialIcon from './MaterialIcon.vue'
 
 const props = defineProps<{
-  item: InventoryItem
+  item: HubNeed
   hub: Pick<ResourceHub, 'id' | 'name' | 'contactPhone' | 'whatsappGroup' | 'hubType'>
   mode: 'civilian' | 'coordinator'
   offline?: boolean
@@ -36,8 +36,13 @@ const CATEGORY_ICON: Record<string, string> = {
   hygiene: 'wash', other: 'inventory_2',
 }
 const icon = computed(() => CATEGORY_ICON[props.item.category] || 'inventory_2')
-const urgencyClass = computed(() => ({ available: 'green', low: 'amber', depleted: 'red' }[props.item.urgency] || 'green'))
-const subtitle = computed(() => `${props.item.quantity} ${props.item.unit} · ${props.hub.name}`)
+const urgencyClass = computed(() => ({ alta: 'red', media: 'amber', baja: 'green' }[props.item.urgency] || 'green'))
+const subtitle = computed(() => {
+  const qty = props.item.quantity != null
+    ? `${props.item.quantity}${props.item.unit ? ' ' + props.item.unit : ''} · `
+    : ''
+  return `${qty}${props.hub.name}`
+})
 const claimer = computed(() => props.item.claimedByName || t('home.someone'))
 
 function whatsapp() {
@@ -62,7 +67,7 @@ async function reopen() {
 function edit() { router.push(`/hubs/${props.hub.id}/manage`) }
 async function close() {
   if (!window.confirm(t('home.closeConfirm'))) return
-  const r = await hubs.removeInventory(props.hub.id, props.item.id)
+  const r = await hubs.deleteNeed(props.hub.id, props.item.id)
   if (r.ok) toast.success(t('home.needClosed'))
   else toast.error((r as { error?: string }).error || t('common.error'))
 }
@@ -77,7 +82,8 @@ async function close() {
           <MaterialIcon :name="state === 'confirmada' ? 'check_circle' : icon" :size="24" fill />
         </div>
         <div class="nc-text">
-          <div class="nc-name" :class="{ 'nc-name--done': state === 'confirmada' }">{{ item.name }}</div>
+          <div class="nc-name" :class="{ 'nc-name--done': state === 'confirmada' }">{{ item.title }}</div>
+          <div v-if="item.description" class="nc-desc">{{ item.description }}</div>
           <div class="nc-sub flex items-center gap-1.5 flex-wrap mt-0.5">
             <span>{{ subtitle }}</span>
             <span v-if="hub.hubType === 'mobile'" class="inline-flex items-center gap-0.5 text-[9px] text-red-700 font-extrabold uppercase bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100">
@@ -94,7 +100,7 @@ async function close() {
       </div>
       <div v-else class="nc-badge" :class="`nc-badge--${urgencyClass}`">
         <span class="nc-dot" :class="`nc-dot--${urgencyClass}`"></span>
-        <span>{{ t('hubs.urgency.' + item.urgency) }}</span>
+        <span>{{ t('needs.urgency.' + item.urgency) }}</span>
       </div>
     </div>
 
@@ -181,6 +187,7 @@ async function close() {
 .nc-name { font-size: 19px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
 .nc-name--done { text-decoration: line-through; text-decoration-color: #C9C2B5; }
 .nc-sub { font-size: 13px; font-weight: 600; color: var(--ink2); margin-top: 1px; }
+.nc-desc { font-size: 13px; font-weight: 600; color: var(--ink2); margin-top: 3px; line-height: 1.35; }
 .nc-badge { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; flex: none; font-size: 12.5px; font-weight: 800; }
 .nc-badge--red { background: var(--red-bg); color: var(--red-c); }
 .nc-badge--amber { background: var(--amber-bg); color: var(--amber-c); }

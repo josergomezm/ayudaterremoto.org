@@ -3,7 +3,7 @@
 // Lista las necesidades de las que te encargaste (mineClaim) o que confirmaste.
 import { computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useHubsStore, type InventoryItem, type ResourceHub } from '../stores/hubs'
+import { useHubsStore, type HubNeed, type ResourceHub } from '../stores/hubs'
 import { useSessionStore } from '../stores/session'
 import NeedCard from '../components/NeedCard.vue'
 import MaterialIcon from '../components/MaterialIcon.vue'
@@ -23,9 +23,9 @@ watch(() => session.email, (newEmail) => {
   }
 })
 
-interface Need { item: InventoryItem; hub: ResourceHub }
+interface Need { item: HubNeed; hub: ResourceHub }
 const mine = computed<Need[]>(() =>
-  hubs.activeHubs.flatMap((hub) => hub.inventory.map((item) => ({ item, hub })))
+  hubs.activeHubs.flatMap((hub) => (hub.needs ?? []).map((item) => ({ item, hub })))
     .filter(({ item }) => item.mineClaim || item.mineConfirm),
 )
 </script>

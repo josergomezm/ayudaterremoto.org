@@ -59,6 +59,7 @@ export interface ResourceHub {
   createdAt: string
   updatedAt: string
   inventory: InventoryItem[]
+  needs?: HubNeed[]
   recentLogs: HubLog[]
   movements?: InventoryMovement[]
   coordinators?: HubCoordinator[]
@@ -139,6 +140,45 @@ export interface MovementPayload {
   note?: string
   lines: MovementLinePayload[]
 }
+
+// Necesidad manual (creada por el coordinador, desacoplada del inventario).
+export type NeedUrgency = 'alta' | 'media' | 'baja'
+export interface HubNeed {
+  id: string
+  hubId: string
+  title: string
+  description?: string
+  category: InventoryItem['category']
+  quantity?: number | null
+  unit?: string | null
+  urgency: NeedUrgency
+  status?: NeedStatus
+  claimedByName?: string | null
+  claimedAt?: string | null
+  confirmedByName?: string | null
+  confirmedAt?: string | null
+  proofUrl?: string | null
+  reopenedCount?: number
+  reopenedByName?: string | null
+  eta?: string | null
+  createdBy: string
+  createdByName: string
+  createdAt: string
+  updatedAt: string
+  // Flags de vista que pone el backend en GET /hubs (nunca expone emails).
+  staleClaim?: boolean
+  mineClaim?: boolean
+  mineConfirm?: boolean
+}
+export interface NeedCreatePayload {
+  title: string
+  description?: string
+  category: InventoryItem['category']
+  quantity?: number
+  unit?: string
+  urgency: NeedUrgency
+}
+export type NeedUpdatePayload = Partial<NeedCreatePayload>
 
 export const useHubsStore = defineStore('hubs', () => {
   const hubs = ref<ResourceHub[]>([])
@@ -257,45 +297,81 @@ export const useHubsStore = defineStore('hubs', () => {
     return r
   }
 
-  // ── Need lifecycle (WS3): abierta → tomada → confirmada ──────────────────
-  function findItem(hubId: string, itemId: string) {
-    return hubs.value.find((h) => h.id === hubId)?.inventory.find((i) => i.id === itemId)
+  // ── Necesidades manuales: CRUD (coordinador) + lifecycle abierta→tomada→confirmada ──
+  function findNeed(hubId: string, needId: string) {
+    return hubs.value.find((h) => h.id === hubId)?.needs?.find((n) => n.id === needId)
   }
 
-  async function claimNeed(hubId: string, itemId: string, claimedByName?: string, eta?: string) {
-    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${itemId}/claim`, {
+  async function createNeed(hubId: string, payload: NeedCreatePayload) {
+    const r = await authedFetch<{ need: HubNeed }>(`/hubs/${hubId}/needs`, {
       method: 'POST',
-      body: JSON.stringify({ eta }),
+      body: JSON.stringify(payload),
     })
     if (r.ok) {
-      const it = findItem(hubId, itemId)
-      if (it) {
-        it.status = 'tomada'
-        it.claimedByName = claimedByName ?? null
-        it.eta = eta ?? null
-        it.staleClaim = false
+      const hub = hubs.value.find((h) => h.id === hubId)
+      if (hub) hub.needs = [...(hub.needs ?? []), r.data.need]
+    }
+    return r
+  }
+
+  async function updateNeed(hubId: string, needId: string, payload: NeedUpdatePayload) {
+    const r = await authedFetch<{ need: HubNeed }>(`/hubs/${hubId}/needs/${needId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+    if (r.ok) {
+      const hub = hubs.value.find((h) => h.id === hubId)
+      if (hub?.needs) {
+        const i = hub.needs.findIndex((n) => n.id === needId)
+        if (i !== -1) hub.needs[i] = r.data.need
       }
     }
     return r
   }
 
-  async function confirmNeed(hubId: string, itemId: string, proofUrl?: string) {
-    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${itemId}/confirm`, {
-      method: 'POST',
-      body: JSON.stringify(proofUrl ? { proofUrl } : {}),
-    })
+  async function deleteNeed(hubId: string, needId: string) {
+    const r = await authedFetch(`/hubs/${hubId}/needs/${needId}`, { method: 'DELETE' })
     if (r.ok) {
-      const it = findItem(hubId, itemId)
-      if (it) { it.status = 'confirmada'; it.proofUrl = proofUrl ?? null; it.staleClaim = false }
+      const hub = hubs.value.find((h) => h.id === hubId)
+      if (hub?.needs) hub.needs = hub.needs.filter((n) => n.id !== needId)
     }
     return r
   }
 
-  async function reopenNeed(hubId: string, itemId: string) {
-    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${itemId}/reopen`, { method: 'POST' })
+  async function claimNeed(hubId: string, needId: string, claimedByName?: string, eta?: string) {
+    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${needId}/claim`, {
+      method: 'POST',
+      body: JSON.stringify({ eta }),
+    })
     if (r.ok) {
-      const it = findItem(hubId, itemId)
-      if (it) { it.status = 'abierta'; it.claimedByName = null; it.proofUrl = null; it.staleClaim = false }
+      const nd = findNeed(hubId, needId)
+      if (nd) {
+        nd.status = 'tomada'
+        nd.claimedByName = claimedByName ?? null
+        nd.eta = eta ?? null
+        nd.staleClaim = false
+      }
+    }
+    return r
+  }
+
+  async function confirmNeed(hubId: string, needId: string, proofUrl?: string) {
+    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${needId}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify(proofUrl ? { proofUrl } : {}),
+    })
+    if (r.ok) {
+      const nd = findNeed(hubId, needId)
+      if (nd) { nd.status = 'confirmada'; nd.proofUrl = proofUrl ?? null; nd.staleClaim = false }
+    }
+    return r
+  }
+
+  async function reopenNeed(hubId: string, needId: string) {
+    const r = await authedFetch<{ status: NeedStatus }>(`/needs/${needId}/reopen`, { method: 'POST' })
+    if (r.ok) {
+      const nd = findNeed(hubId, needId)
+      if (nd) { nd.status = 'abierta'; nd.claimedByName = null; nd.proofUrl = null; nd.staleClaim = false }
     }
     return r
   }
@@ -338,6 +414,9 @@ export const useHubsStore = defineStore('hubs', () => {
     fetchLogs,
     addCoordinator,
     removeCoordinator,
+    createNeed,
+    updateNeed,
+    deleteNeed,
     claimNeed,
     confirmNeed,
     reopenNeed,

@@ -9,6 +9,7 @@ import ToastHost from './ToastHost.vue'
 import { useSessionStore } from '../stores/session'
 import { useAdminStore } from '../stores/admin'
 import { useIncidentsStore } from '../stores/incidents'
+import { isModuleEnabled } from '../config/features'
 import logoUrl from '../assets/logo.svg'
 
 const { t } = useI18n()
@@ -39,15 +40,15 @@ const navGroups = computed(() => {
       items: [
         { name: 'needs', to: '/', label: 'shell.nav.needs', icon: 'inventory_2' },
         { name: 'hubs', to: '/hubs', label: 'shell.nav.hubs', icon: 'warehouse' },
-        { name: 'brigades', to: '/brigades', label: 'shell.nav.brigades', icon: 'group_work' },
+        { name: 'brigades', to: '/brigades', label: 'shell.nav.brigades', icon: 'group_work', module: 'brigades' },
       ]
     },
     {
       title: 'shell.groups.emergencies',
       items: [
-        { name: 'incidents', to: '/incidents', label: 'shell.nav.map', icon: 'map' },
-        { name: 'report', to: '/report', label: 'shell.nav.report', icon: 'add_circle' },
-        { name: 'people', to: '/people', label: 'shell.nav.people', icon: 'person_search' },
+        { name: 'incidents', to: '/incidents', label: 'shell.nav.map', icon: 'map', module: 'emergencies' },
+        { name: 'report', to: '/report', label: 'shell.nav.report', icon: 'add_circle', module: 'emergencies' },
+        { name: 'people', to: '/people', label: 'shell.nav.people', icon: 'person_search', module: 'emergencies' },
       ]
     },
     {
@@ -73,7 +74,11 @@ const navGroups = computed(() => {
       ]
     })
   }
+  // Modo suministros: esconde del nav los ítems de módulos deshabilitados
+  // (Emergencias, Brigadas) y descarta los grupos que queden vacíos.
   return list
+    .map((g) => ({ ...g, items: g.items.filter((i) => isModuleEnabled((i as { module?: string }).module)) }))
+    .filter((g) => g.items.length > 0)
 })
 
 // Highlight a tab for its page AND its nested routes (e.g. /guides/:id).

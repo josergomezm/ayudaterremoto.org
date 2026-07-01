@@ -2,6 +2,7 @@ import { nextTick } from 'vue'
 import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
 import { useSessionStore } from '../stores/session'
 import { useAdminStore } from '../stores/admin'
+import { isModuleEnabled } from '../config/features'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -11,10 +12,10 @@ const router = createRouter({
     { path: '/me', name: 'my-activity', component: () => import('../pages/MyActivityPage.vue') },
     { path: '/profile', name: 'profile', component: () => import('../pages/ProfilePage.vue') },
     { path: '/verify', redirect: '/profile' },
-    { path: '/incidents', name: 'incidents', component: () => import('../pages/MapPage.vue') },
-    { path: '/incidents/:id', name: 'incident-detail', component: () => import('../pages/IncidentDetailPage.vue') },
-    { path: '/report', name: 'report', component: () => import('../pages/ReportPage.vue') },
-    { path: '/people', name: 'people', component: () => import('../pages/PeoplePage.vue') },
+    { path: '/incidents', name: 'incidents', component: () => import('../pages/MapPage.vue'), meta: { module: 'emergencies' } },
+    { path: '/incidents/:id', name: 'incident-detail', component: () => import('../pages/IncidentDetailPage.vue'), meta: { module: 'emergencies' } },
+    { path: '/report', name: 'report', component: () => import('../pages/ReportPage.vue'), meta: { module: 'emergencies' } },
+    { path: '/people', name: 'people', component: () => import('../pages/PeoplePage.vue'), meta: { module: 'emergencies' } },
     { path: '/alerts', name: 'alerts', component: () => import('../pages/AnnouncementsPage.vue') },
     { path: '/guides', name: 'guides', component: () => import('../pages/GuidesPage.vue') },
     { path: '/guides/:id', name: 'guide-detail', component: () => import('../pages/GuideDetailPage.vue') },
@@ -25,8 +26,8 @@ const router = createRouter({
     { path: '/hubs/create', name: 'hub-create', component: () => import('../pages/HubCreatePage.vue'), meta: { requiresAdmin: true } },
     { path: '/hubs/:id', name: 'hub-detail', component: () => import('../pages/HubDetailPage.vue') },
     { path: '/hubs/:id/manage', name: 'hub-manage', component: () => import('../pages/HubManagePage.vue'), meta: { requiresCoordinator: true } },
-    { path: '/brigades', name: 'brigades', component: () => import('../pages/BrigadesPage.vue') },
-    { path: '/brigades/:id', name: 'brigade-detail', component: () => import('../pages/BrigadeDetailPage.vue') },
+    { path: '/brigades', name: 'brigades', component: () => import('../pages/BrigadesPage.vue'), meta: { module: 'brigades' } },
+    { path: '/brigades/:id', name: 'brigade-detail', component: () => import('../pages/BrigadeDetailPage.vue'), meta: { module: 'brigades' } },
     // Catch-all 404. Required because Firebase Hosting rewrites every URL to
     // index.html — without this, typos render an empty RouterView.
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../pages/NotFoundPage.vue') },
@@ -38,6 +39,11 @@ const router = createRouter({
 // Protects sensitive routes at the router level (belt-and-suspenders alongside
 // in-template v-if checks). Waits for the session to be ready before deciding.
 router.beforeEach(async (to) => {
+  // Modo suministros: las rutas de módulos escondidos (Emergencias/Brigadas)
+  // siguen registradas por si se reactiva el flag, pero se redirigen al Home.
+  const mod = to.meta.module as string | undefined
+  if (mod && !isModuleEnabled(mod)) return { name: 'home' }
+
   if (!to.meta.requiresAdmin && !to.meta.requiresCoordinator) return true
 
   const session = useSessionStore()

@@ -231,6 +231,36 @@ export interface InventoryItem {
   eta?: string | null;
 }
 
+// Necesidad manual: la crea el coordinador, NO se deriva del stock. Vive en
+// resourceHubs/{hubId}/needs/{needId}. Reusa el lifecycle abierta→tomada→
+// confirmada, pero con urgencia MANUAL (alta/media/baja).
+export type NeedUrgency = "alta" | "media" | "baja";
+export interface HubNeed {
+  id: string;
+  hubId: string;                   // denormalizado (para el feed multi-centro)
+  title: string;                   // "200 envases", "Verduras para la sopa"
+  description?: string;
+  category: InventoryCategory;     // reusa categorías para icono/filtro
+  quantity?: number | null;        // objetivo opcional ("200")
+  unit?: string | null;            // "envases", "kg", "personas"
+  urgency: NeedUrgency;            // MANUAL, no derivada de la cantidad
+  status?: NeedStatus;             // ausente = "abierta"
+  claimedBy?: string | null;
+  claimedByName?: string | null;
+  claimedAt?: string | null;
+  confirmedBy?: string | null;
+  confirmedByName?: string | null;
+  confirmedAt?: string | null;
+  proofUrl?: string | null;
+  reopenedCount?: number;
+  reopenedByName?: string | null;
+  eta?: string | null;
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface HubLog {
   id: string;
   action: HubLogAction;
