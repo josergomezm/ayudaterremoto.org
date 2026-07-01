@@ -177,7 +177,8 @@ export interface MovementLine {
   itemName: string;
   unit: string;
   category: InventoryCategory;
-  quantity: number; // magnitud (siempre positiva); el signo lo da `type`
+  quantity: number;        // magnitud (siempre positiva); el signo lo da `type`
+  resultingQty?: number;   // saldo del ítem tras aplicar la línea (para el ledger "→ X")
 }
 export interface InventoryMovement {
   id: string;

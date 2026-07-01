@@ -1241,7 +1241,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
             const newQty = Math.max(0, item.quantity + sign * line.quantity);
             const urgency = newQty === 0 ? "depleted" : newQty <= 5 ? "low" : "available";
             await itemRef.update({ quantity: newQty, urgency, updatedAt: now });
-            resultLines.push({ itemId: item.id, itemName: item.name, unit: item.unit, category: item.category, quantity: line.quantity });
+            resultLines.push({ itemId: item.id, itemName: item.name, unit: item.unit, category: item.category, quantity: line.quantity, resultingQty: newQty });
           } else {
             // Ítem nuevo (solo tiene sentido en una entrada).
             if (body.type === "salida") return send(400, { error: "invalid_line", message: "No se puede dar salida a un ítem que aún no existe." });
@@ -1253,7 +1253,7 @@ export const api = onRequest({ region: "us-central1", maxInstances: 10, secrets:
               unit: line.unit!.trim(), urgency, updatedAt: now, status: "abierta", reopenedCount: 0,
             };
             await db.doc(`resourceHubs/${hubId}/inventory/${itemId}`).set(newItem);
-            resultLines.push({ itemId, itemName: newItem.name, unit: newItem.unit, category: newItem.category, quantity: qty });
+            resultLines.push({ itemId, itemName: newItem.name, unit: newItem.unit, category: newItem.category, quantity: qty, resultingQty: qty });
           }
         }
 

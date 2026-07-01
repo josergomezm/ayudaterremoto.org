@@ -114,6 +114,7 @@ export interface MovementLine {
   unit: string
   category: InventoryItem['category']
   quantity: number
+  resultingQty?: number
 }
 export interface InventoryMovement {
   id: string

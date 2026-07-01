@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, RouterLink } from 'vue-router'
-import { useHubsStore, type InventoryItem } from '../stores/hubs'
+import { useHubsStore, type InventoryItem, type InventoryMovement } from '../stores/hubs'
 import { useSessionStore } from '../stores/session'
 import { useAdminStore, type AdminUser } from '../stores/admin'
 import { useToast } from '../lib/toast'
@@ -30,6 +30,50 @@ const hub = computed(() => {
 // Carga el historial de movimientos en cuanto el centro esté disponible en el store
 // (al entrar directo/refrescar, el centro se carga async — esperamos a que exista).
 watch(hub, (h) => { if (h && !h.movements) hubsStore.fetchMovements(hubId) }, { immediate: true })
+
+// ── Inventario: toolbar (búsqueda / categoría / orden) ────────────────────
+const invSearch = ref('')
+const invCategory = ref('')
+const invSort = ref<'name' | 'qty'>('name')
+const inventoryView = computed(() => {
+  const q = invSearch.value.trim().toLowerCase()
+  const list = (hub.value?.inventory || []).filter((i) =>
+    (!q || i.name.toLowerCase().includes(q)) && (!invCategory.value || i.category === invCategory.value))
+  return [...list].sort((a, b) => (invSort.value === 'qty' ? b.quantity - a.quantity : a.name.localeCompare(b.name)))
+})
+// Acción "Entrada/salida" por fila → abre el modal con el ítem preseleccionado.
+const movementPreselect = ref<InventoryItem | null>(null)
+function openMovement(item?: InventoryItem) { movementPreselect.value = item ?? null; showMovementModal.value = true }
+const rowMenu = ref<string | null>(null)
+
+// ── Movimientos: filtro + agrupación por día + resumen semanal ────────────
+const mvFilter = ref<'all' | 'entrada' | 'salida'>('all')
+const filteredMovements = computed<InventoryMovement[]>(() =>
+  (hub.value?.movements || []).filter((m) => mvFilter.value === 'all' || m.type === mvFilter.value))
+function dayKey(iso: string): 'today' | 'yesterday' | 'earlier' {
+  const t = new Date(iso).getTime()
+  const now = new Date()
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  if (t >= startToday) return 'today'
+  if (t >= startToday - 86400000) return 'yesterday'
+  return 'earlier'
+}
+const groupedMovements = computed(() => {
+  const groups: { key: 'today' | 'yesterday' | 'earlier'; items: InventoryMovement[] }[] = []
+  for (const m of filteredMovements.value) {
+    const k = dayKey(m.createdAt)
+    let g = groups.find((x) => x.key === k)
+    if (!g) { g = { key: k, items: [] }; groups.push(g) }
+    g.items.push(m)
+  }
+  return groups
+})
+const weekCounts = computed(() => {
+  const weekAgo = Date.now() - 7 * 86400000
+  const recent = (hub.value?.movements || []).filter((m) => new Date(m.createdAt).getTime() >= weekAgo)
+  return { in: recent.filter((m) => m.type === 'entrada').length, out: recent.filter((m) => m.type === 'salida').length }
+})
+function fmtQty(n: number) { return (Math.round(n * 100) / 100).toString() }
 
 const coordinators = computed(() => {
   return (hub.value as any)?.coordinators || []
@@ -137,24 +181,6 @@ async function onSaveDetails() {
   if (res.ok) {
     toast.success(t('common.saved'))
     await hubsStore.fetchAll()
-  } else {
-    toast.error(res.error || t('common.error'))
-  }
-}
-
-async function quickAdjust(itemId: string, delta: number) {
-  const item = hub.value?.inventory.find(i => i.id === itemId)
-  if (!item) return
-  if (item.quantity + delta < 0) return
-  
-  const res = await hubsStore.adjustInventory(hubId, itemId, {
-    delta,
-    action: delta > 0 ? 'restock' : 'distribute'
-  })
-  if (res.ok) {
-    toast.success(t('common.saved'))
-    await hubsStore.fetchAll()
-    await fetchLogs()
   } else {
     toast.error(res.error || t('common.error'))
   }
@@ -330,7 +356,8 @@ async function onRemoveCoordinator(email: string) {
         v-if="showMovementModal"
         :hub-id="hubId"
         :items="hub?.inventory || []"
-        @close="showMovementModal = false"
+        :preselect="movementPreselect"
+        @close="showMovementModal = false; movementPreselect = null"
         @saved="hubsStore.fetchMovements(hubId)"
       />
 
@@ -338,12 +365,12 @@ async function onRemoveCoordinator(email: string) {
       <div class="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-slate-200">
         
         <!-- Tab 1: Inventory Table -->
-        <div v-if="activeTab === 'inventory'" class="space-y-6">
+        <div v-if="activeTab === 'inventory'" class="space-y-5 supply-theme">
           <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ t('hubs.inventory') }}</h2>
             <div class="flex items-center gap-2">
               <button
-                @click="showMovementModal = true"
+                @click="openMovement()"
                 class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 cursor-pointer shadow-sm"
               >
                 <MaterialIcon name="swap_vert" :size="16" />
@@ -357,6 +384,33 @@ async function onRemoveCoordinator(email: string) {
                 {{ t('hubs.addResource') }}
               </button>
             </div>
+          </div>
+
+          <!-- Resumen + toolbar (rediseño) -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <div class="px-4 py-3 rounded-2xl border border-[#E7E2D9] bg-[#FCFBF9] min-w-[110px]">
+              <div class="text-2xl font-extrabold text-[#211F1B] leading-none">{{ hub.inventory.length }}</div>
+              <div class="text-xs font-semibold text-[#6F685C] mt-1.5">{{ t('movements.invResources') }}</div>
+            </div>
+            <div class="px-4 py-3 rounded-2xl border border-[#E7E2D9] bg-[#FCFBF9]">
+              <div class="text-sm font-extrabold text-[#211F1B] leading-none flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#16A866]"></span> {{ formatRelativeTime(hub.updatedAt, locale) }}</div>
+              <div class="text-xs font-semibold text-[#6F685C] mt-2">{{ t('hubs.lastUpdate') }}</div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <div class="flex-1 min-w-[180px] flex items-center gap-2 h-11 px-3 bg-[#F7F5F1] border border-[#E7E2D9] rounded-xl">
+              <MaterialIcon name="search" :size="19" class="text-[#938B7D]" />
+              <input v-model="invSearch" :placeholder="t('movements.invSearch')" class="flex-1 bg-transparent outline-none text-sm text-[#211F1B]" />
+            </div>
+            <select v-model="invCategory" class="h-11 px-3 border border-[#E7E2D9] bg-white rounded-xl text-sm font-bold text-[#211F1B] cursor-pointer">
+              <option value="">{{ t('hubs.category') }}</option>
+              <option v-for="c in ['water','food','medical','tools','shelter','clothing','hygiene','other']" :key="c" :value="c">{{ t('hubs.categories.' + c) }}</option>
+            </select>
+            <select v-model="invSort" class="h-11 px-3 border border-[#E7E2D9] bg-white rounded-xl text-sm font-bold text-[#211F1B] cursor-pointer">
+              <option value="name">{{ t('movements.invSortName') }}</option>
+              <option value="qty">{{ t('movements.invSortQty') }}</option>
+            </select>
           </div>
 
           <!-- Add Resource Form -->
@@ -439,112 +493,103 @@ async function onRemoveCoordinator(email: string) {
             </div>
           </div>
 
-          <!-- Inventory List -->
-          <div v-if="hub.inventory.length === 0" class="text-slate-500 italic text-sm">
-            {{ t('hubs.emptyInventory') }}
+          <!-- Inventory table (rediseño · Centro Detalle) -->
+          <div v-if="inventoryView.length === 0" class="text-[#6F685C] italic text-sm py-6">
+            {{ invSearch || invCategory ? t('home.emptyTitle') : t('hubs.emptyInventory') }}
           </div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
-              <thead class="bg-slate-50">
-                <tr>
-                  <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{{ t('hubs.resourceName') }}</th>
-                  <th scope="col" class="px-4 py-3 class text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{{ t('hubs.category') }}</th>
-                  <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{{ t('hubs.quantity') }}</th>
-                  <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Urgencia</th>
-                  <th scope="col" class="relative px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Acciones</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-200 bg-white">
-                <tr v-for="item in hub.inventory" :key="item.id">
-                  <td class="whitespace-nowrap px-4 py-4 text-sm font-medium text-slate-900">{{ item.name }}</td>
-                  <td class="whitespace-nowrap px-4 py-4 text-sm text-slate-500">{{ t('hubs.categories.' + item.category) }}</td>
-                  <td class="whitespace-nowrap px-4 py-4 text-sm text-slate-900">
-                    <div class="flex items-center gap-2">
-                      <button 
-                        @click="quickAdjust(item.id, -1)"
-                        class="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer disabled:opacity-50"
-                        :disabled="item.quantity <= 0"
-                      >
-                        <MaterialIcon name="remove" :size="14" />
-                      </button>
-                      <span class="font-semibold w-12 text-center">{{ item.quantity }} {{ item.unit }}</span>
-                      <button 
-                        @click="quickAdjust(item.id, 1)"
-                        class="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
-                      >
-                        <MaterialIcon name="add" :size="14" />
-                      </button>
-                    </div>
-                  </td>
-                  <td class="whitespace-nowrap px-4 py-4 text-sm">
-                    <span 
-                      class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset"
-                      :class="{
-                        'bg-emerald-50 text-emerald-700 ring-emerald-600/10': item.urgency === 'available',
-                        'bg-amber-50 text-amber-700 ring-amber-600/10': item.urgency === 'low',
-                        'bg-red-50 text-red-700 ring-red-600/10': item.urgency === 'depleted'
-                      }"
-                    >
-                      {{ t('hubs.urgency.' + item.urgency) }}
-                    </span>
-                  </td>
-                  <td class="whitespace-nowrap px-4 py-4 text-right text-sm font-medium space-x-2">
-                    <button 
-                      @click="openAdjustModal(item)"
-                      class="inline-flex items-center gap-0.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 px-2 py-1 text-xs font-semibold cursor-pointer"
-                    >
-                      <MaterialIcon name="tune" :size="12" />
-                      <span>{{ t('hubs.adjust') }}</span>
-                    </button>
-                    <button 
-                      @click="onRemoveItem(item.id)"
-                      class="inline-flex items-center gap-0.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 px-2 py-1 text-xs font-semibold cursor-pointer"
-                    >
-                      <MaterialIcon name="delete" :size="12" />
-                      <span>{{ t('hubs.remove') }}</span>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-else>
+            <div class="hidden sm:grid grid-cols-[2.4fr_2fr_1.6fr_1.4fr] gap-3.5 px-1 pb-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#938B7D] border-b border-[#EFEBE3]">
+              <div>{{ t('hubs.resourceName') }}</div><div>{{ t('hubs.category') }}</div><div>{{ t('hubs.quantity') }}</div><div class="text-right">{{ t('movements.invActions') }}</div>
+            </div>
+            <div
+              v-for="item in inventoryView" :key="item.id"
+              class="grid grid-cols-[1fr_auto] sm:grid-cols-[2.4fr_2fr_1.6fr_1.4fr] gap-x-3.5 gap-y-1.5 items-center py-3.5 px-1 border-b border-[#EFEBE3]"
+            >
+              <div class="min-w-0">
+                <div class="text-base font-extrabold text-[#211F1B] tracking-tight">{{ item.name }}</div>
+                <div class="text-xs font-semibold text-[#938B7D]">{{ t('movements.invUpdatedAt', { time: formatRelativeTime(item.updatedAt, locale) }) }}</div>
+              </div>
+              <div class="hidden sm:block text-sm font-semibold text-[#6F685C]">{{ t('hubs.categories.' + item.category) }}</div>
+              <div class="text-right sm:text-left text-lg font-extrabold text-[#211F1B]">{{ fmtQty(item.quantity) }} {{ item.unit }}</div>
+              <div class="col-span-2 sm:col-span-1 flex sm:justify-end gap-1.5 relative">
+                <button class="w-9 h-9 border border-[#E7E2D9] rounded-[10px] bg-white flex items-center justify-center hover:bg-[#F6F4EF] cursor-pointer" :title="t('hubs.adjust')" @click="openAdjustModal(item)">
+                  <MaterialIcon name="tune" :size="19" class="text-[#6F685C]" />
+                </button>
+                <button class="w-9 h-9 border border-[#E7E2D9] rounded-[10px] bg-white flex items-center justify-center hover:bg-[#F6F4EF] cursor-pointer" :title="t('movements.register')" @click="openMovement(item)">
+                  <MaterialIcon name="swap_vert" :size="19" class="text-[#6F685C]" />
+                </button>
+                <button class="w-9 h-9 border border-[#E7E2D9] rounded-[10px] bg-white flex items-center justify-center hover:bg-[#F6F4EF] cursor-pointer" :title="t('movements.invMore')" @click="rowMenu = rowMenu === item.id ? null : item.id">
+                  <MaterialIcon name="more_horiz" :size="19" class="text-[#6F685C]" />
+                </button>
+                <div v-if="rowMenu === item.id" class="absolute right-0 top-10 z-10 bg-white border border-[#E7E2D9] rounded-xl shadow-lg py-1 min-w-[150px]">
+                  <button class="flex items-center gap-2 w-full px-3 py-2 text-sm font-semibold text-[#B42318] hover:bg-red-50 cursor-pointer" @click="rowMenu = null; onRemoveItem(item.id)">
+                    <MaterialIcon name="delete" :size="18" /> {{ t('hubs.remove') }}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Tab: Movimientos (lotes entrada/salida) -->
-        <div v-else-if="activeTab === 'movements'" class="space-y-4">
-          <div class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ t('movements.history') }}</h2>
-            <button
-              @click="showMovementModal = true"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 cursor-pointer shadow-sm"
-            >
-              <MaterialIcon name="swap_vert" :size="16" />
-              {{ t('movements.register') }}
-            </button>
+        <!-- Tab: Movimientos (ledger por lote · rediseño) -->
+        <div v-else-if="activeTab === 'movements'" class="space-y-4 supply-theme">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex bg-[#EFEBE3] rounded-[11px] p-1 gap-0.5">
+              <button
+                v-for="f in (['all', 'entrada', 'salida'] as const)" :key="f"
+                @click="mvFilter = f"
+                class="px-4 py-1.5 rounded-lg text-[13px] font-bold transition"
+                :class="mvFilter === f ? 'bg-white shadow-sm text-[#211F1B]' : 'text-[#6F685C]'"
+              >{{ f === 'all' ? t('movements.filterAll') : f === 'entrada' ? t('movements.filterIn') : t('movements.filterOut') }}</button>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="hidden sm:block text-xs font-semibold text-[#6F685C]">{{ t('movements.weekSummary', { in: weekCounts.in, out: weekCounts.out }) }}</div>
+              <button @click="openMovement()" class="h-10 px-4 rounded-xl bg-[#2350C9] text-white text-sm font-extrabold flex items-center gap-1.5 hover:bg-[#1B3FA3] cursor-pointer">
+                <MaterialIcon name="swap_vert" :size="18" /> {{ t('movements.register') }}
+              </button>
+            </div>
           </div>
 
-          <div v-if="!hub?.movements || hub.movements.length === 0" class="py-8 text-center text-sm italic text-slate-500">
-            {{ t('movements.empty') }}
-          </div>
-          <div v-else class="rounded-xl ring-1 ring-slate-200 divide-y divide-slate-100">
-            <div v-for="mv in hub.movements" :key="mv.id" class="px-4 py-3">
-              <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 min-w-0">
-                  <span
-                    class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold"
-                    :class="mv.type === 'entrada' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'"
-                  >{{ mv.type === 'entrada' ? t('movements.entrada') : t('movements.salida') }}</span>
-                  <span class="text-sm font-semibold text-slate-800 truncate">{{ mv.reason }}</span>
+          <div v-if="filteredMovements.length === 0" class="py-10 text-center text-sm italic text-[#6F685C]">{{ t('movements.empty') }}</div>
+
+          <div v-else class="space-y-4">
+            <div v-for="g in groupedMovements" :key="g.key">
+              <div class="text-[11px] font-extrabold uppercase tracking-wide text-[#938B7D] mb-3">
+                {{ g.key === 'today' ? t('movements.today') : g.key === 'yesterday' ? t('movements.yesterday') : t('movements.earlier') }}
+              </div>
+              <div class="space-y-3.5">
+                <div v-for="mv in g.items" :key="mv.id" class="flex gap-3.5">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-none" :class="mv.type === 'entrada' ? 'bg-[#E9F6EE]' : 'bg-[#FBF1DF]'">
+                    <MaterialIcon :name="mv.type === 'entrada' ? 'south' : 'north'" :size="21" :class="mv.type === 'entrada' ? 'text-[#15794B]' : 'text-[#9A5808]'" />
+                  </div>
+                  <div class="flex-1 min-w-0 border border-[#E7E2D9] rounded-2xl p-4">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex items-center gap-2 flex-wrap min-w-0">
+                        <span class="text-[11px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-md" :class="mv.type === 'entrada' ? 'text-[#15794B] bg-[#E9F6EE]' : 'text-[#9A5808] bg-[#FBF1DF]'">
+                          {{ mv.type === 'entrada' ? t('movements.entrada') : t('movements.salida') }}
+                        </span>
+                        <span class="text-base font-extrabold text-[#211F1B] tracking-tight truncate">{{ mv.reason }}</span>
+                      </div>
+                      <span class="text-xs font-semibold text-[#938B7D] whitespace-nowrap">{{ formatRelativeTime(mv.createdAt, locale) }}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-3">
+                      <div
+                        v-for="(ln, j) in mv.lines" :key="j"
+                        class="flex items-center gap-2 px-3 py-2 rounded-[10px] border"
+                        :class="mv.type === 'entrada' ? 'bg-[#F4FAF6] border-[#D9EEE1]' : 'bg-[#FBF6F4] border-[#F0DDD7]'"
+                      >
+                        <span class="text-[13.5px] font-bold text-[#211F1B]">{{ ln.itemName }}</span>
+                        <span class="text-[13.5px] font-extrabold" :class="mv.type === 'entrada' ? 'text-[#15794B]' : 'text-[#B42318]'">{{ mv.type === 'entrada' ? '+' : '−' }}{{ fmtQty(ln.quantity) }} {{ ln.unit }}</span>
+                        <span v-if="ln.resultingQty !== undefined" class="text-xs font-semibold text-[#938B7D]">→ {{ fmtQty(ln.resultingQty) }}</span>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-4 mt-3 pt-3 border-t border-[#EFEBE3] text-xs font-semibold text-[#6F685C] flex-wrap">
+                      <span class="flex items-center gap-1.5"><MaterialIcon name="person" :size="16" class="text-[#938B7D]" /> {{ mv.actorName }}</span>
+                      <span v-if="mv.note" class="flex items-center gap-1.5"><MaterialIcon name="sticky_note_2" :size="16" class="text-[#938B7D]" /> {{ mv.note }}</span>
+                    </div>
+                  </div>
                 </div>
-                <span class="text-[11px] text-slate-400 whitespace-nowrap">{{ formatRelativeTime(mv.createdAt, locale) }}</span>
               </div>
-              <div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-600">
-                <span v-for="(ln, j) in mv.lines" :key="j">
-                  {{ ln.itemName }}: <strong>{{ mv.type === 'entrada' ? '+' : '−' }}{{ ln.quantity }} {{ ln.unit }}</strong>
-                </span>
-              </div>
-              <div v-if="mv.note" class="mt-0.5 text-xs italic text-slate-500">{{ mv.note }}</div>
-              <div class="mt-0.5 text-[11px] text-slate-400">{{ t('movements.by', { name: mv.actorName }) }}</div>
             </div>
           </div>
         </div>
